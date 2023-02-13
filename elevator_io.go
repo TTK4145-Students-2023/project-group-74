@@ -5,8 +5,6 @@ import "sync"
 import "net"
 import "fmt"
 
-
-
 const _pollRate = 20 * time.Millisecond
 
 var _initialized    bool = false
@@ -41,12 +39,6 @@ type ButtonEvent struct {
 	Button ButtonType
 }
 
-
-
-
-type
-
-
 func Init(addr string, numFloors int) {
 	if _initialized {
 		fmt.Println("Driver already initialized!")
@@ -61,8 +53,6 @@ func Init(addr string, numFloors int) {
 	}
 	_initialized = true
 }
-
-
 
 func SetMotorDirection(dir MotorDirection) {
 	write([4]byte{1, byte(dir), 0, 0})
@@ -83,8 +73,6 @@ func SetDoorOpenLamp(value bool) {
 func SetStopLamp(value bool) {
 	write([4]byte{5, toByte(value), 0, 0})
 }
-
-
 
 func PollButtons(receiver chan<- ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
@@ -138,9 +126,6 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	}
 }
 
-
-
-
 func GetButton(button ButtonType, floor int) bool {
 	a := read([4]byte{6, byte(button), byte(floor), 0})
 	return toBool(a[1])
@@ -164,9 +149,6 @@ func GetObstruction() bool {
 	a := read([4]byte{9, 0, 0, 0})
 	return toBool(a[1])
 }
-
-
-
 
 
 func read(in [4]byte) [4]byte {
