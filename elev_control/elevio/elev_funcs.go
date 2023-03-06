@@ -7,70 +7,11 @@ import (
 	"time"
 )
 
-/// Variables
-
-var _initialized bool = false
-var _numFloors int = 4
-var _numBtn int = 3
-var _mtx sync.Mutex
-var _conn net.Conn
-
-// types/ consts to put in a common consts file
-type (
-	Availability   bool
-	MotorDirection int
-	ButtonType     int
-	ElevState      int
-)
-
-const _pollRate = 20 * time.Millisecond
-
-const (
-	Avaliable   Availability = true
-	Unavaliable              = false
-)
-
-const (
-	MD_Up   MotorDirection = 1
-	MD_Down                = -1
-	MD_Stop                = 0
-)
-
-const (
-	BT_HallUp   ButtonType = 0
-	BT_HallDown            = 1
-	BT_Cab                 = 2
-)
-
-const (
-	Idle     ElevState = 0
-	DoorOpen           = 1
-	Moving             = 2
-)
-
-type ButtonEvent struct {
-	Floor  int
-	Button ButtonType
-}
-
-type ElevInfo struct {
-	elevID       int
-	avaliability Availability
-	lastfloor    int
-}
-
-type ElevControlChannels struct {
-	CompletedOrder chan ButtonEvent
-	NewOrder       chan ButtonEvent
-	ElevInfo       chan ElevInfo
-}
-
 //////////////// Public funcs
 
-// Init/ combined/channel funcs
+// Init/ combined funcs
 
 func Init(addr string, numFloors int) {
-
 	if _initialized {
 		fmt.Println("Driver already initialized!")
 		return
@@ -83,6 +24,27 @@ func Init(addr string, numFloors int) {
 		panic(err.Error())
 	}
 	_initialized = true
+}
+
+// get/set funcs
+func SetMotorDirection(dir MotorDirection) {
+	write([4]byte{1, byte(dir), 0, 0})
+}
+
+func SetButtonLamp(button ButtonType, floor int, value bool) {
+	write([4]byte{2, byte(button), byte(floor), toByte(value)})
+}
+
+func SetFloorIndicator(floor int) {
+	write([4]byte{3, byte(floor), 0, 0})
+}
+
+func SetDoorOpenLamp(value bool) {
+	write([4]byte{4, toByte(value), 0, 0})
+}
+
+func SetStopLamp(value bool) {
+	write([4]byte{5, toByte(value), 0, 0})
 }
 
 func PollButtons(receiver chan<- ButtonEvent) {
@@ -137,26 +99,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	}
 }
 
-// get/set funcs
-func SetMotorDirection(dir MotorDirection) {
-	write([4]byte{1, byte(dir), 0, 0})
-}
-
-func SetButtonLamp(button ButtonType, floor int, value bool) {
-	write([4]byte{2, byte(button), byte(floor), toByte(value)})
-}
-
-func SetFloorIndicator(floor int) {
-	write([4]byte{3, byte(floor), 0, 0})
-}
-
-func SetDoorOpenLamp(value bool) {
-	write([4]byte{4, toByte(value), 0, 0})
-}
-
-func SetStopLamp(value bool) {
-	write([4]byte{5, toByte(value), 0, 0})
-}
+// private funcs
 
 func GetButton(button ButtonType, floor int) bool {
 	a := read([4]byte{6, byte(button), byte(floor), 0})
@@ -182,7 +125,6 @@ func GetObstruction() bool {
 	return toBool(a[1])
 }
 
-// private funcs
 func read(in [4]byte) [4]byte {
 	_mtx.Lock()
 	defer _mtx.Unlock()
