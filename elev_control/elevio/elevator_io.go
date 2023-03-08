@@ -12,6 +12,8 @@ import (
 var _initialized bool = false
 var _numFloors int = 4
 var _numBtn int = 3
+var _numElevs int = 3
+
 var _mtx sync.Mutex
 var _conn net.Conn
 
@@ -54,17 +56,27 @@ type ButtonEvent struct {
 }
 
 type ElevInfo struct {
-	elevID       int
+	motorDirection MotorDirection 
 	avaliability Availability
 	lastfloor    int
 }
 
 type ElevControlChannels struct {
-	CompletedOrder chan ButtonEvent
-	NewOrder       chan ButtonEvent
-	ElevInfo       chan ElevInfo
+	FinishedOrder    chan ButtonEvent
+	NewOrders        chan ButtonEvent
+	NewBtnpress 	 chan ButtonEvent
+	NewFloor		 chan int
+	MyElevInfo       chan ElevInfo
+	ConfirmedHMatrix chan HMatrix
 }
 
+type CurrentOrders struct{
+	HMatrix [2][_numFloors]bool // updated from master
+	
+	CurrentOrders [2][_numFloors]bool  //updated from master
+
+	CabCalls [_numElevs][_numFloors]bool //own and other elevs cab calls 
+}
 //////////////// Public funcs
 
 // Init/ combined/channel funcs
@@ -107,7 +119,8 @@ func PollFloorSensor(receiver chan<- int) {
 		time.Sleep(_pollRate)
 		v := GetFloor()
 		if v != prev && v != -1 {
-			receiver <- v
+			rec
+			eiver <- v
 		}
 		prev = v
 	}

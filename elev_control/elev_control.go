@@ -3,38 +3,73 @@ package elev_control
 import "elev_control/elevio"
 
 
-////////////////////////utlevert kode
-
-
-	elevio.Init("localhost:15657", numFloors)
-
-	var d elevio.MotorDirection = elevio.MD_Stop
-	elevio.SetMotorDirection(d)
-
+func RunElevator (chans ElevControlChannels){  
 	
-
-	go elevio.PollButtons(buttons_chn,obstr_chn)
-	go elevio.PollFloorSensor(floors_chn)
-	go elevio.BtnEventHandler
-
-
-
-	
-func RunElevator (chans ElevControlChannels){
 	MyElev:= ElevInfo{
-		elevid: GetMyId(),
-		Availability: Avaliable,
+		availability: Avaliable,
 		lastfloor: GetFloor(),
+		motorDirection : MD_Stop,
 	}
+
+	MyState ElevState = Idle
+
+	for GetFloor() == -1 {
+		SetMotorDirection(MD_Down)
+	}
+	SetMotorDirection(MD_Stop)
+	MyElev.lastfloor=GetFloor()
+
+
 	for{
 		select{
-		case a := <-inputch
-			switch(state)
-			case state
+		case newOrder := <- ElevControlChannels.NewOrders: 
+			UpdateCurrentOrders(newOrder)
+			UpdateHMatrix() /// ?????? 
+			switch(MyState){
+				case Idle:
+					ElevInfo.MotorDirection = ChooseDirection(CurrentOrders,MyElev.lastfloor)
+					SetMotorDirection(MyElev.MotorDirection)
+					if MyElev.motorDirection == MD_Stop{
+						ElevState=DoorOpen
+						ArrivedAtOrder() // stop motor, change elevstate to dooropen, add to finished order. prepare for cab call(?)
+					
+					}
+					else{
+						ElevState=Moving
+					}
+				case DoorOpen:
+					ArrivedAtOrder()
+				case Moving:
+					
+					
+
+			}
+		case newFloor := <- ElevControlChannels.NewFloor:
+			if newFloor==MyElev.lastfloor{
+				break
+			}
+			MyElev.lastfloor=newFloor
+			if OrderAtFloor(newfloor)==1{
+				finishedOrder:=ArrivedAtOrder()
+				ElevControlChannels.FinishedOrder <- finishedOrder
+			}
+
+
+
+
+
+		case finishedOrder := <- ElevControlChannels.FinishedOrder:
+
+		case newBtnPress := <- ElevControlChannels.NewBtnpress:
+		
+			
+
+
+
 		}
 	}
-}
 
+}
 	for {
 		select {
 		case a := <-drv_buttons:   // if btnpressed
