@@ -6,12 +6,11 @@ import "elev_control/elevio"
 func RunElevator (chans ElevControlChannels){  
 	
 	MyElev:= ElevInfo{
-		availability: Avaliable,
+		MyState : Idle
 		lastfloor: GetFloor(),
 		motorDirection : MD_Stop,
+		cabCalls : [],
 	}
-
-	MyState ElevState = Idle
 
 	for GetFloor() == -1 {
 		SetMotorDirection(MD_Down)
@@ -31,18 +30,18 @@ func RunElevator (chans ElevControlChannels){
 					SetMotorDirection(MyElev.MotorDirection)
 					if MyElev.motorDirection == MD_Stop{
 						ElevState=DoorOpen
-						ArrivedAtOrder() // stop motor, change elevstate to dooropen, add to finished order. prepare for cab call(?)
+						finishedOrder:=ArrivedAtOrder()
+						ElevControlChannels.FinishedOrder <- finishedOrder// stop motor, change elevstate to dooropen, add to finished order. prepare for cab call(?)
 					
 					}
 					else{
 						ElevState=Moving
 					}
 				case DoorOpen:
-					ArrivedAtOrder()
+					finishedOrder:=ArrivedAtOrder()
+					ElevControlChannels.FinishedOrder <- finishedOrder
 				case Moving:
 					
-					
-
 			}
 		case newFloor := <- ElevControlChannels.NewFloor:
 			if newFloor==MyElev.lastfloor{
@@ -57,11 +56,13 @@ func RunElevator (chans ElevControlChannels){
 
 
 
-
 		case finishedOrder := <- ElevControlChannels.FinishedOrder:
+			
 
 		case newBtnPress := <- ElevControlChannels.NewBtnpress:
-		
+			if newBtnPress.ButtonType==BT_Cab{
+				
+			}
 			
 
 
