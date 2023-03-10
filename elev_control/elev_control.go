@@ -1,46 +1,41 @@
 package elev_control
 
 import "elev_control/elevio"
+import "types"
+
+
 
 
 func RunElevator (chans ElevControlChannels){  
 	
-	MyElev:= ElevInfo{
-		MyState : Idle
-		lastfloor: GetFloor(),
-		motorDirection : MD_Stop,
-		cabCalls : [],
+	MyElev:= &
+	LOCAL_ELEVATOR_INFO{
+		State: idle,
+		Floor: GetFloor(),
+		Direction : MD_Stop,
+		Orders:[NUM_FLOORS][NUM_BUTTON]bool,
 	}
 
 	for GetFloor() == -1 {
 		SetMotorDirection(MD_Down)
 	}
 	SetMotorDirection(MD_Stop)
-	MyElev.lastfloor=GetFloor()
+	MyElev.Floor=GetFloor()
 
 
 	for{
 		select{
 		case newOrder := <- ElevControlChannels.NewOrders: 
-			UpdateCurrentOrders(newOrder)
-			UpdateHMatrix() /// ?????? 
-			switch(MyState){
+			AddNewOrders(newOrder,MyElev)
+			ChooseDirectionAndState(MyElev)
+			switch(MyElev.State){
 				case Idle:
-					ElevInfo.MotorDirection = ChooseDirection(CurrentOrders,MyElev.lastfloor)
-					SetMotorDirection(MyElev.MotorDirection)
-					if MyElev.motorDirection == MD_Stop{
-						ElevState=DoorOpen
-						finishedOrder:=ArrivedAtOrder()
-						ElevControlChannels.FinishedOrder <- finishedOrder// stop motor, change elevstate to dooropen, add to finished order. prepare for cab call(?)
-					
-					}
-					else{
-						ElevState=Moving
-					}
+
 				case DoorOpen:
-					finishedOrder:=ArrivedAtOrder()
-					ElevControlChannels.FinishedOrder <- finishedOrder
-				case Moving:
+					ArrivedAtOrder()
+				case Moving: 
+					
+					
 					
 			}
 		case newFloor := <- ElevControlChannels.NewFloor:
