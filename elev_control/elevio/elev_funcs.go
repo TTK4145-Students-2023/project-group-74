@@ -1,170 +1,81 @@
 package elev_control
 
-import (
-	"fmt"
-	"net"
-	"sync"
-	"time"
-)
-
-//////////////// Public funcs
-
-// Init/ combined funcs
-
-func Init(addr string, numFloors int) {
-	if _initialized {
-		fmt.Println("Driver already initialized!")
-		return
-	}
-	_numFloors = numFloors
-	_mtx = sync.Mutex{}
-	var err error
-	_conn, err = net.Dial("tcp", addr)
-	if err != nil {
-		panic(err.Error())
-	}
-	_initialized = true
+func ChooseDirectionAndState(MyElev *LOCAL_ELEVATOR_INFO) {
+	newDirAndState[2]=findDirection(MyElev)
+	SetMotorDirection(newDirAndState[0])
+	MyElev.MotorDirection=newDirAndState[0]
+	MyElev.State=newDirAndState[1]	
 }
 
-// get/set funcs
-func SetMotorDirection(dir MotorDirection) {
-	write([4]byte{1, byte(dir), 0, 0})
-}
-
-func SetButtonLamp(button ButtonType, floor int, value bool) {
-	write([4]byte{2, byte(button), byte(floor), toByte(value)})
-}
-
-func SetFloorIndicator(floor int) {
-	write([4]byte{3, byte(floor), 0, 0})
-}
-
-func SetDoorOpenLamp(value bool) {
-	write([4]byte{4, toByte(value), 0, 0})
-}
-
-func SetStopLamp(value bool) {
-	write([4]byte{5, toByte(value), 0, 0})
-}
-
-func PollButtons(receiver chan<- ButtonEvent) {
-	prev := make([][3]bool, _numFloors)
-	for {
-		time.Sleep(_pollRate)
-		for f := 0; f < _numFloors; f++ {
-			for b := ButtonType(0); b < 3; b++ {
-				v := GetButton(b, f)
-				if v != prev[f][b] && v != false {
-					receiver <- ButtonEvent{f, ButtonType(b)}
-				}
-				prev[f][b] = v
-			}
+func findDirection(MyElev LOCAL_ELEVATOR_INFO) [2]int {
+	switch{
+	case MyElev.MotorDirection==MD_Up:
+		if requests_above(MyElev) {
+			return [2]int{MD_Up, Moving}
+		} else if requests_here(MyElev)||requests_below(MyElev) {
+			return [2]int{MD_Down, Moving}
+		} else {
+			return [2]int{MD_Up, Moving}	
 		}
-	}
-}
-
-func PollFloorSensor(receiver chan<- int) {
-	prev := -1
-	for {
-		time.Sleep(_pollRate)
-		v := GetFloor()
-		if v != prev && v != -1 {
-			receiver <- v
+	case MyElev.MotorDirection==MD_Down:
+		if requests_below(MyElev) {
+			return [2]int{MD_Down, Moving}
+		} else if requests_here(MyElev)||requests_above(MyElev) {
+			return [2]int{MD_Up, Moving}
+		}  else {
+			return [2]int{MD_Down, Moving}	
 		}
-		prev = v
+	case MyElev.MotorDirection==MD_Stop:
+		if requests_here(MyElev) {
+			return [2]int{MD_Stop, DoorOpen}
+		} else if requests_above(MyElev) {
+			return [2]int{MD_Up, Moving}
+		} else if requests_below(MyElev) {
+			return [2]int{MD_Down, Moving}
+		} else {
+			return [2]int{MD_Stop, Idle}		
+		}		
+	
 	}
 }
 
-func PollStopButton(receiver chan<- bool) {
-	prev := false
-	for {
-		time.Sleep(_pollRate)
-		v := GetStop()
-		if v != prev {
-			receiver <- v
-		}
-		prev = v
+func requests_here(myElev LOCAL_ELEV_INFO)bool{
+
+}
+
+
+func requests_above(myElev LOCAL_ELEV_INFO)bool{
+
+}
+
+func requests_below(myElev LOCAL_ELEV_INFO)bool{
+
+}
+func AddOneNewOrderBtn(newOrder BUTTON_INFO, MyElev *LOCAL_ELEVATOR_INFO){
+	if MyElev.Orders[newOrder.floor][newOrder.button]==0{
+		MyElev.Orders[newOrder.floor][newOrder.button]=1
 	}
 }
 
-func PollObstructionSwitch(receiver chan<- bool) {
-	prev := false
-	for {
-		time.Sleep(_pollRate)
-		v := GetObstruction()
-		if v != prev {
-			receiver <- v
-		}
-		prev = v
+func IsOrderAtFloor(MyElev LOCAL_ELEVATOR_INFO) bool {
+	btntype := dir2Btntype(MyElev.motordirection)
+	if MyElev.Orders[GetFloor()][btntype] == 1 {
+		return true
+	}
+	return false
+}
+
+func dir2Btntype(dir motordirection) ButtonType {
+	if dir == MD_Up {
+		return BT_HallUp
+	} else if dir == MD_Down {
+		return BT_HallDown
+	} else if dir == MD_Stop {
+		panic("Invalid direction")
 	}
 }
 
-// private funcs
-
-func GetButton(button ButtonType, floor int) bool {
-	a := read([4]byte{6, byte(button), byte(floor), 0})
-	return toBool(a[1])
 }
+func ArrivedAtOrder(finOrderChan chan ButtonEvent, MyElev *LOCAL_ELEVATOR_INFO){
 
-func GetFloor() int {
-	a := read([4]byte{7, 0, 0, 0})
-	if a[1] != 0 {
-		return int(a[2])
-	} else {
-		return -1
-	}
-}
-
-func GetStop() bool {
-	a := read([4]byte{8, 0, 0, 0})
-	return toBool(a[1])
-}
-
-func GetObstruction() bool {
-	a := read([4]byte{9, 0, 0, 0})
-	return toBool(a[1])
-}
-
-func read(in [4]byte) [4]byte {
-	_mtx.Lock()
-	defer _mtx.Unlock()
-
-	_, err := _conn.Write(in[:])
-	if err != nil {
-		panic("Lost connection to Elevator Server")
-	}
-
-	var out [4]byte
-	_, err = _conn.Read(out[:])
-	if err != nil {
-		panic("Lost connection to Elevator Server")
-	}
-
-	return out
-}
-
-func write(in [4]byte) {
-	_mtx.Lock()
-	defer _mtx.Unlock()
-
-	_, err := _conn.Write(in[:])
-	if err != nil {
-		panic("Lost connection to Elevator Server")
-	}
-}
-
-func toByte(a bool) byte {
-	var b byte = 0
-	if a {
-		b = 1
-	}
-	return b
-}
-
-func toBool(a byte) bool {
-	var b bool = false
-	if a != 0 {
-		b = true
-	}
-	return b
 }

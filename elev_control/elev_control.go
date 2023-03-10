@@ -26,25 +26,18 @@ func RunElevator (chans ElevControlChannels){
 	for{
 		select{
 		case newOrder := <- ElevControlChannels.NewOrders: 
-			AddNewOrders(newOrder,MyElev)
-			ChooseDirectionAndState(MyElev)
-			switch(MyElev.State){
-				case Idle:
-
-				case DoorOpen:
-					ArrivedAtOrder()
-				case Moving: 
-					
-					
-					
-			}
+			AddNewOrdersToLocal(newOrder,MyElev)
+			AddNewOrdersToForeign(newOrder,MyElev)
+			redecideChan<-true
+			
 		case newFloor := <- ElevControlChannels.NewFloor:
 			if newFloor==MyElev.lastfloor{
 				break
 			}
 			MyElev.lastfloor=newFloor
 			if OrderAtFloor(newfloor)==1{
-				finishedOrder:=ArrivedAtOrder()
+				ArrivedAtOrder() //Opendoors, wait, wait for them to press cab etc
+				finishedOrder:=GetOrder(newfloor,MyElev.MotorDirection)
 				ElevControlChannels.FinishedOrder <- finishedOrder
 			}
 
@@ -52,6 +45,10 @@ func RunElevator (chans ElevControlChannels){
 
 
 		case finishedOrder := <- ElevControlChannels.FinishedOrder:
+			registerFinishedOrder() //check if cab call or H call,
+			ExternalFinishedOrderChan <- finishedOrder
+			redecideChan <- true
+
 			
 
 		case newBtnPress := <- ElevControlChannels.NewBtnpress:
@@ -60,46 +57,13 @@ func RunElevator (chans ElevControlChannels){
 			}
 			
 
-
-
+		case redecide: <- redecideChan
+			ChooseDirectionAndState(MyElev)
 		}
 	}
 
 }
-	for {
-		select {
-		case a := <-drv_buttons:   // if btnpressed
-			order_matrix[a.Button][a.Floor] = 1
-			fmt.Printf("%+v\n", a)
-			elevio.SetButtonLamp(a.Button, a.Floor, true)
 
-		case a := <-drv_floors:  // if floorsensor has new value
-			fmt.Printf("%+v\n", a)
-			if a == numFloors-1 {
-				d = elevio.MD_Down
-			} else if a == 0 {
-				d = elevio.MD_Up
-			}
-			elevio.SetMotorDirection(d)
-
-		case a := <-drv_obstr: // if obstruction active
-			fmt.Printf("%+v\n", a)
-			if a {
-				elevio.SetMotorDirection(elevio.MD_Stop)
-			} else {
-				elevio.SetMotorDirection(d)
-			}
-
-		case a := <-drv_stop: // if stop active
-			fmt.Printf("%+v\n", a)
-			for f := 0; f < numFloors; f++ {
-				for b := elevio.ButtonType(0); b < 3; b++ {
-					elevio.SetButtonLamp(b, f, false)
-				}
-			}
-		}
-	}
-}
 
 
 
