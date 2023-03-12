@@ -39,19 +39,7 @@ func findDirection(MyElev LOCAL_ELEVATOR_INFO) [2]int {
 	}
 }
 
-func requests_here(myElev LOCAL_ELEV_INFO)bool{
-
-}
-
-
-func requests_above(myElev LOCAL_ELEV_INFO)bool{
-
-}
-
-func requests_below(myElev LOCAL_ELEV_INFO)bool{
-
-}
-func AddOneNewOrderBtn(newOrder BUTTON_INFO, MyElev *LOCAL_ELEVATOR_INFO){
+func addOneNewOrderBtn(newOrder BUTTON_INFO, MyElev *LOCAL_ELEVATOR_INFO){ //neccecary?
 	if MyElev.Orders[newOrder.floor][newOrder.button]==0{
 		MyElev.Orders[newOrder.floor][newOrder.button]=1
 	}
@@ -75,7 +63,42 @@ func dir2Btntype(dir motordirection) ButtonType {
 	}
 }
 
+func localElevInit(MyElev *LOCAL_ELEVATOR_INFO){
+	for GetFloor() == -1 {
+		SetMotorDirection(MD_Down)
+	}
+		SetMotorDirection(MD_Stop)
+	MyElev.Floor=GetFloor()
 }
+
+
+Undefinedfuncs: 
+
+func requests_here(myElev LOCAL_ELEV_INFO)bool{
+
+}
+
+func requests_above(myElev LOCAL_ELEV_INFO)bool{
+
+}
+
+func requests_below(myElev LOCAL_ELEV_INFO)bool{
+
+}
+
 func ArrivedAtOrder(finOrderChan chan ButtonEvent, MyElev *LOCAL_ELEVATOR_INFO){
+
+}
+
+func UpdateLights(MyElev LOCAL_ELEV_INFO){
+	Oppdater lys når ny local elev info er tilgjengelig. 
+	Burde gjøres hver gang Local Elevinfo.ORders
+	blir oppdatert. 
+}
+
+func registerFinishedCabOrder(finishedOrder BUTTON_INFO, MyElev *LOCAL_ELEV_INFO){
+}
+
+func registerFinishedHallOrder(finishedOrder BUTTON_INFO, MyElev *LOCAL_ELEV_INFO){
 
 }

@@ -1,10 +1,7 @@
 package elev_control
-
+ jabba dabba
 import "elev_control/elevio"
 import "types"
-
-
-
 
 func RunElevator (chans ElevControlChannels){  
 	
@@ -16,104 +13,57 @@ func RunElevator (chans ElevControlChannels){
 		Orders:[NUM_FLOORS][NUM_BUTTON]bool,
 	}
 
-	for GetFloor() == -1 {
-		SetMotorDirection(MD_Down)
-	}
-	SetMotorDirection(MD_Stop)
-	MyElev.Floor=GetFloor()
-
+	localElevInit(MyElev)
 
 	for{
 		select{
 		case newOrder := <- ElevControlChannels.NewOrders: 
 			AddNewOrdersToLocal(newOrder,MyElev)
+			UpdateLights(MyElev)
+			ElevInfoChan <- MyElev
 			AddNewOrdersToForeign(newOrder,MyElev)
 			redecideChan<-true
 			
-		case newFloor := <- ElevControlChannels.NewFloor:
-			if newFloor==MyElev.lastfloor{
-				break
-			}
-			MyElev.lastfloor=newFloor
-			if OrderAtFloor(newfloor)==1{
+		case newFloor := <- ElevControlChannels.NewFloorChan:
+			if IsOrderAtFloor(newFloor)==1{
 				ArrivedAtOrder() //Opendoors, wait, wait for them to press cab etc
 				finishedOrder:=GetOrder(newfloor,MyElev.MotorDirection)
-				ElevControlChannels.FinishedOrder <- finishedOrder
+				if finishedOrder.BUTTONTYPE==BUTTON_CAB{
+					registerFinishedCabOrder(finishedOrder,MyElev)
+					UpdateLights(MyElev)
+					ElevInfoChan <- MyElev
+				} else {
+					registerFinishedHallOrder(finishedOrder,MyElev)
+					ElevControlChannels.FinishedOrderChan <- finishedOrder
+				}
+				MyElev.Floor=newFloor
+
+				redecideChan <- true
+			}
+			MyElev.Floor=newFloor
+			UpdateLights(MyElev)
+			ElevInfoChan <- MyElev
+
+		case newBtnPress := <- ElevControlChannels.NewBtnpressChan:
+			if newBtnPress.BUTTON_TYPE==Button_Cab{
+				addOneNewOrderBtn(newBtnPress,MyElev)
+				UpdateLights(MyElev)
+				ElevInfoChan <- MyElev
+				ElevControlChannels.redecideChan<-true
+			} else{
+				newHcallRequestChan <- newBtnPress
 			}
 
-
-
-
-		case finishedOrder := <- ElevControlChannels.FinishedOrder:
-			registerFinishedOrder() //check if cab call or H call,
-			ExternalFinishedOrderChan <- finishedOrder
-			redecideChan <- true
-
-			
-
-		case newBtnPress := <- ElevControlChannels.NewBtnpress:
-			if newBtnPress.ButtonType==BT_Cab{
-				
-			}
-			
-
-		case redecide: <- redecideChan
+		case ShouldRedecide:= <- ElevControlChannels.redecideChan:
 			ChooseDirectionAndState(MyElev)
+			ElevInfoChan <- MyElev
+			if MyElev.State ==DoorOpen{
+				ElevControlChannels.NewFloorChan <- MyElev.Floor
+			}
 		}
 	}
 
 }
-
-
-
-
-/////////////
-
-input: 
-next_order (from master or cab call)
-Hall-call matrix (recived from master) 
-
-
-internal:
-
-action master call
-	targetfloor=master_Call// maybe or maybe not
-	drive
-	while driving towards targetfloor 
-		check if currentfloor && current_direction in hMatrix
-			DoorOpen()
-			output elev_output
-			next_action -> drive_cab_call
-
-	if current_floor=targetfloor	
-		output elev_output
-		next_action -> drive_cab_call
-
-action drive_cab_call
-	decide_targetfloor()
-	while driving	
-		check if currentfloor && current_direction in hMatrix
-			stop, dooropenfunc
-			output elev_output
-			next_action -> drive_cab_call
-
-		if current_floor=targetfloor	
-			output elev_output
-			next_action -> idle
-
-
-action idle
-	motor stop
-
-
-
-
-
-
-
-
-
-
 
 
 

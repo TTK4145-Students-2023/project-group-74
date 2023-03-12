@@ -111,8 +111,7 @@ func PollFloorSensor(receiver chan<- int) {
 		time.Sleep(_pollRate)
 		v := GetFloor()
 		if v != prev && v != -1 {
-			rec
-			eiver <- v
+			receiver <- v
 		}
 		prev = v
 	}
