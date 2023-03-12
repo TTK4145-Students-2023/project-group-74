@@ -34,7 +34,7 @@ type BUTTON_INFO struct{
 
 type ORDER_TYPE BUTTON_INFO
 
-type FOREGIN_ORDER_TYPE stuct{
+type FOREGIN_ORDER_TYPE struct{
   Foregin_order BUTTON_INFO 
   Active        bool 
   Local         bool 
