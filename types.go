@@ -20,6 +20,9 @@ const (
 )
 
 // ----- TYPE DEFINITIONS ------ // 
+
+
+
 type BUTTON_TYPE int 
 const(
   Button_Cab      BUTTON_TYPE = 0
@@ -34,7 +37,7 @@ type BUTTON_INFO struct{
 
 type ORDER_TYPE BUTTON_INFO
 
-type FOREGIN_ORDER_TYPE struct{
+type FOREIGN_ORDER_TYPE struct{
   Foregin_order BUTTON_INFO 
   Active        bool 
   Local         bool 
@@ -52,15 +55,21 @@ type LOCAL_ELEVATOR_INFO struct{
   Floor       int 
   Direction   MOTOR_DIR 
   State       ELEVATOR_STATE
-  Orders      [NUM_FLOORS][NUM_BUTTON]bool  
+  ElevID      string   
 }
 
-type FOREGIN_ELEVATOR_INFO struct{
+type FOREIGN_ELEVATOR_INFO struct{
   Floor       int 
   Direction   MOTOR_DIR 
   State       ELEVATOR_STATE
-  Orders      [NUM_ORDERS] FOREGIN_ORDER_TYPE
+  Cabcalls    [NUM_BUTTON]bool  
   ElevatorID  string 
+}
+
+type P2P_ELEV_INFO struct{
+  LocalElev LOCAL_ELEVATOR_INFO
+  ForeignElev1  FOREIGN_ELEVATOR_INFO
+  ForeignElev2  FOREIGN_ELEVATOR_INFO
 }
 
 type MOTOR_DIR int
