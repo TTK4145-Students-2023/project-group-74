@@ -1,13 +1,9 @@
 package network
 
 import (
-	"flag"
-	"os"
 	"fmt"
-	"time"
-	"project-group-74/elev_control/elevio"
+	"os"
 	"project-group-74/network/subs/bcast"
-	"project-group-74/network/subs/conn"
 	"project-group-74/network/subs/localip"
 	"project-group-74/network/subs/peers"
 )
@@ -15,26 +11,16 @@ import (
 //************ const for P2P ************
 
 const (
-	PeerPort = 15647
+	PeerPort  = 15647
 	StatePort = 16569
 )
 
-//************ Variables for P2P ************
-
-type LocalState struct{
-	Floor int
-	Dir elev_control.MotorDirection
-	State elev_control.ElevState
-	Orders [3][4]bool
-}
-
-
-//************** main P2P func *************
-func P2Pnet(){
+// ************** main P2P func *************
+func P2Pnet() {
 	var id string
-	if id == ""{
+	if id == "" {
 		localIP, err := localip.LocalIP()
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 			localIP = "DISCONNECTED"
 		}
@@ -42,13 +28,30 @@ func P2Pnet(){
 	}
 
 	peerUpdateCh := make(chan peers.PeerUpdate) //We make a channel for receiving updates on the id's of the peers that are alive on the network
-	peerTxEnable := make(chan bool) //Channel to enable 
+	peerTxEnable := make(chan bool)             //Channel to enable
 
 	go peers.Transmitter(PeerPort, id, peerTxEnable)
 	go peers.Receiver(PeerPort, peerUpdateCh)
 
+	LocalElevatorInfoTx := make(chan types.LOCAL_ELEVATOR_INFO)
+	ForeignElevatorInfoRx := make(chan types.FOREIGN_ELEVATOR_INFO)
 
+	go bcast.Transmitter(StatePort, LocalElevatorInfoTx)
+	go bcast.Receiver(StatePort, ForeignElevatorInfoRx)
 
-	go bcast.Transmitter(StatePort, )
-	go bcast.Receiver(StatePort, )
+	for {
+		select {
+		case p := <-peerUpdateCh:
+			fmt.Printf("Peer update:+n")
+			fmt.Printf(" Peers:  %q\n", p.Peers)
+			fmt.Printf(" New: %q\n", p.New)
+			fmt.Printf(" Lost: %q\n", p.Lost)
+
+		case BroadcastLocalState := <-LocalElevatorInfoTx:
+			LocalElevatorInfoTx <- BroadcastLocalState
+
+		case ReceiveForeignElevatorState := <-ForeignElevatorInfoRx:
+			ForeignElevatorInfoRx <- ReceiveForeignElevatorState
+		}
+	}
 }
