@@ -1,30 +1,24 @@
 package network
 
 import (
-	"network/subs/bcast"
-	"network/subs/localip"
-	"network/subs/peers"
 	"flag"
 	"fmt"
 	"os"
+	"project-group-74/network/subs/bcast"
+	"project-group-74/network/subs/localip"
+	"project-group-74/network/subs/peers"
 	"time"
 )
 
 // We define some custom struct to send over the network.
 // Note that all members we want to transmit must be public. Any private members
 //  will be received as zero-values.
-type slaveTransmitt struct {
-	new_hall_calls //enten i matrix form eller vector med ButtonType
-	finishedorders //en fornuftig måte å formattere på
-	var currentFloor int 
-	var avaliability bool
+type HelloMsg struct{
+	Message string
+	Iter int 
 }
 
-type slaveRecieve struct{
-
-}
-
-func main() {
+func Main(){
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
