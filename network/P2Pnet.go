@@ -2,7 +2,9 @@ package network
 
 import (
 	"fmt"
+	"net"
 	"os"
+	"flag"
 	"project-group-74/network/subs/bcast"
 	"project-group-74/network/subs/localip"
 	"project-group-74/network/subs/peers"
@@ -17,9 +19,10 @@ const (
 )
 
 // ************** main P2P func *************
-func P2Pnet() {
-	LocalElevatorInfoTx <-chan types.FOREIGN_ELEVETAOR_INFO
-	ForeignElevatorInfoRx chan<- types.FOREIGN_ELEVETAOR_INFO
+func P2Pnet(
+	LocalElevatorInfoTx <-chan types.FOREIGN_ELEVETAOR_INFO,
+	ForeignElevatorInfoRx chan<- types.FOREIGN_ELEVETAOR_INFO) {
+
 
 
 	var MyID string
@@ -39,7 +42,7 @@ func P2Pnet() {
 	peerUpdateCh := make(chan peers.PeerUpdate) //We make a channel for receiving updates on the id's of the peers that are alive on the network
 	peerTxEnable := make(chan bool)             //Channel to enable
 
-	go peers.Transmitter(PeerPort, id, peerTxEnable)
+	go peers.Transmitter(PeerPort, MyID, peerTxEnable)
 	go peers.Receiver(PeerPort, peerUpdateCh)
 
 	BCStateTx := make(chan types.FOREIGN_ELEVATOR_INFO)
@@ -75,16 +78,38 @@ func P2Pnet() {
 }
 
 
-func CompareIDAddr (string MyID)bool{
-	for range peers.Peers{
-		MyID < 
-	}
+func splitIPAddr (ip string)byte{
+	addr := net.ParseIP(ip).To4()
+	return addr[3]
 }
 
-func MasterSlave (string MyID){
-	if CompareIDAddr(MyID) == true{
-		return Master = 1
-		else
-		return Master = 0
+type ipsFlag []string
+
+func CompareIPAddr (MyID string, Peers []string)bool{
+	var ips ipsFlag
+	flag.Var(&ips, "ip", "list of IP addresses")
+
+	flag.Parse()
+
+	lowestIP := Peers[0]
+	for _, ip := range peers.Peers[1:]{
+		lastOctet := splitIPAddr(ip)
+		addrLowest := net.ParseIP(lowestIP).To4()
+		if lastOctet < addrLowest[3]{
+			lowestIP = ip
+		}
+	}
+	myIP := net.ParseIP(MyID).To4()
+	lowestIP = string(net.ParseIP(lowestIP).To4())
+	return myIP[3] <= lowestIP[3]
+}
+
+func setMasterSlaveFlag (MyID, Peers []string){
+	for _, peer := range peers.Peers[0:]{
+		if CompareIPAddr(MyID, peers.Peers) == true {
+			master := MyID
+		}else{
+			slave := MyID
+		}
 	}
 }

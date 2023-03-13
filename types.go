@@ -88,7 +88,7 @@ func isValidFloor(floor int) bool{
 
 func isValidID(ID string) bool{
   id, err := strconv.Atoi(ID)
-  if er != nil || id <0{
+  if err != nil || id <0{
     return false}
   return true
 }
