@@ -1,36 +1,36 @@
 package elev_control
 
-func ChooseDirectionAndState(MyElev *LOCAL_ELEVATOR_INFO) {
+func ChooseDirectionAndState(MyElev *LOCAL_ELEVATOR_INFO, CurrentHMatrix HMATRIX) {
 	newDirAndState[2]=findDirection(MyElev)
 	SetMotorDirection(newDirAndState[0])
 	MyElev.MotorDirection=newDirAndState[0]
 	MyElev.State=newDirAndState[1]	
 }
 
-func findDirection(MyElev LOCAL_ELEVATOR_INFO) [2]int {
+func findDirection(MyElev LOCAL_ELEVATOR_INFO, CurrentHmatrix HMATRIX) [2]int {
 	switch{
 	case MyElev.MotorDirection==MD_Up:
-		if requests_above(MyElev) {
+		if requests_above(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Up, Moving}
-		} else if requests_here(MyElev)||requests_below(MyElev) {
+		} else if requests_here(MyElev,CurrentHmatrix)||requests_below(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Down, Moving}
 		} else {
 			return [2]int{MD_Up, Moving}	
 		}
 	case MyElev.MotorDirection==MD_Down:
-		if requests_below(MyElev) {
+		if requests_below(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Down, Moving}
-		} else if requests_here(MyElev)||requests_above(MyElev) {
+		} else if requests_here(MyElev,CurrentHmatrix)||requests_above(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Up, Moving}
 		}  else {
 			return [2]int{MD_Down, Moving}	
 		}
 	case MyElev.MotorDirection==MD_Stop:
-		if requests_here(MyElev) {
+		if requests_here(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Stop, DoorOpen}
-		} else if requests_above(MyElev) {
+		} else if requests_above(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Up, Moving}
-		} else if requests_below(MyElev) {
+		} else if requests_below(MyElev,CurrentHmatrix) {
 			return [2]int{MD_Down, Moving}
 		} else {
 			return [2]int{MD_Stop, Idle}		
@@ -43,6 +43,13 @@ func addOneNewOrderBtn(newOrder BUTTON_INFO, MyElev *LOCAL_ELEVATOR_INFO){ //nec
 	if MyElev.Orders[newOrder.floor][newOrder.button]==0{
 		MyElev.Orders[newOrder.floor][newOrder.button]=1
 	}
+}
+
+func IsHOrderActive(newOrder BUTTON_INFO, CurrentHMatrix HMATRIX) bool{ //neccecary?
+	if CurrentHMatrix[newOrder.floor][newOrder.button]==0{
+		return false
+	}
+	return true
 }
 
 func IsOrderAtFloor(MyElev LOCAL_ELEVATOR_INFO) bool {
@@ -71,20 +78,52 @@ func localElevInit(MyElev *LOCAL_ELEVATOR_INFO){
 	MyElev.Floor=GetFloor()
 }
 
-
-Undefinedfuncs: 
-
-func requests_here(myElev LOCAL_ELEV_INFO)bool{
-
+func requests_here(myElev LOCAL_ELEV_INFO,CurrentHmatrix HMATRIX)bool{
+	totalOrders:= append(MyElev.Orders[:],CurrentHMatrix)
+	for btn=0;btn<NUM_BUTTON;btn++{
+		if totalOrders[myElev.Floor][btn]{
+			return true
+		}
+	}
+	return false
 }
 
-func requests_above(myElev LOCAL_ELEV_INFO)bool{
-
+func requests_above(myElev LOCAL_ELEV_INFO,CurrentHmatrix HMATRIX)bool{
+	totalOrders:= append(MyElev.Orders[:],CurrentHMatrix)
+	for f:=myElev.Floor+1;f<NUM_FLOORS;f++{
+		for btn=0;btn<NUM_BUTTON;btn++{
+			if totalOrders[f][btn]{
+				return true
+			}
+		}
+	}
+	return false
 }
 
-func requests_below(myElev LOCAL_ELEV_INFO)bool{
-
+func requests_below(myElev LOCAL_ELEV_INFO,CurrentHmatrix HMATRIX)bool{
+	totalOrders:= append(MyElev.Orders[:],CurrentHMatrix)
+	for f:=0;f<myElev.Floor;f++{
+		for btn=0;btn<NUM_BUTTON;btn++{
+			if totalOrders[f][btn]{
+				return true
+			}
+		}
+	}
+	return false
 }
+
+//undefined funcs
+func AddNewOrdersToLocal(newOrder ORDER,MyElev *LOCAL_ELEVATOR_INFO, CurrentHMatrix *HMATRIX){
+	for f=0;f<NUM_FLOORS;f++{
+		for btn=0;btn<NUM_BUTTON-1;btn++{
+			neworder[MyElev.ElevID][]
+		}
+		
+	}
+	
+}
+
+
 
 func ArrivedAtOrder(finOrderChan chan ButtonEvent, MyElev *LOCAL_ELEVATOR_INFO){
 

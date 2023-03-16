@@ -10,57 +10,12 @@ import (
 /// Variables
 
 var _initialized bool = false
-var _numFloors int = 4
-var _numBtn int = 3
-var _numElevs int = 3
-
 var _mtx sync.Mutex
 var _conn net.Conn
 
-// types/ consts to put in a common consts file
-type (
-	Availability   bool
-	MotorDirection int
-	ButtonType     int
-	ElevState      int
-)
-
 const _pollRate = 20 * time.Millisecond
 
-const (
-	Avaliable   Availability = true
-	Unavaliable              = false
-)
 
-const (
-	MD_Up   MotorDirection = 1
-	MD_Down                = -1
-	MD_Stop                = 0
-)
-
-const (
-	BT_HallUp   ButtonType = 0
-	BT_HallDown            = 1
-	BT_Cab                 = 2
-)
-
-
-
-type ButtonEvent struct {
-	Floor  int
-	Button ButtonType
-}
-
-
-
-type ElevControlChannels struct {
-	FinishedOrder    chan ButtonEvent
-	NewOrders        chan ButtonEvent
-	NewBtnpress 	 chan ButtonEvent
-	NewFloor		 chan int
-	MyElevInfo       chan ElevInfo
-	ConfirmedHMatrix chan HMatrix
-}
 
 type CurrentOrders struct{
 	HMatrix [2][_numFloors]bool // updated from master

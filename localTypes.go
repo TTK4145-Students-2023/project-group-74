@@ -1,4 +1,4 @@
-package types 
+package localTypes 
 
 import 
   //project config 
@@ -27,15 +27,16 @@ type BUTTON_TYPE int
 const(
   Button_Cab      BUTTON_TYPE = 0
   Button_hall_up              = 1
-  Buuton_hall_down            = 2
+  Buton_hall_down            = 2
 )
 
 type BUTTON_INFO struct{
-  FLoor   int
+  Floor   int
   Button  BUTTON_TYPE
 }
 
-type ORDER_TYPE BUTTON_INFO
+type HMATRIX [NUM_FLOORS][2]bool
+type ORDER map[string][types.NUM_FLOORS][2]bool
 
 type FOREIGN_ORDER_TYPE struct{
   Foregin_order BUTTON_INFO 
@@ -55,6 +56,7 @@ type LOCAL_ELEVATOR_INFO struct{
   Floor       int 
   Direction   MOTOR_DIR 
   State       ELEVATOR_STATE
+  CabCalls    [NUM_BUTTONS]bool
   ElevID      string   
 }
 
@@ -67,7 +69,7 @@ type FOREIGN_ELEVATOR_INFO struct{
 }
 
 type P2P_ELEV_INFO struct{
-  LocalElev LOCAL_ELEVATOR_INFO
+  LocalElev FOREIGN_ELEVATOR_INFO
   ForeignElev1  FOREIGN_ELEVATOR_INFO
   ForeignElev2  FOREIGN_ELEVATOR_INFO
 }

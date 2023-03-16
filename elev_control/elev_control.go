@@ -1,43 +1,56 @@
 package elev_control
-jabba dabba 
+jj
 import "elev_control/elevio"
-import "types"
+import "project-group-74/network/subs/localip"
+import "localTypes"
 
-func RunElevator (chans ElevControlChannels){  
+
+//Channels:
+	//Output : To DLOCC : ElevInfoChan,NewHallRequestChan,FinishedHOrderChan
+			// To P2P   : TxP2PElevInfoChan
+	//Inputs : From DLOCC    : NewOrdersChan
+			// From Hardware : NewBtnPressChan, NewFloorChan
+			// From P2P      : RxP2pElevInfoChan
+
+func RunElevator (ElevInfoChan chan,NewHallRequestChan chan,FinishedHOrderChan chan, 
+				  TxP2PElevInfoChan chan, NewOrdersChan chan, NewBtnPressChan chan,
+				  NewFloorChan chan, RxP2pElevInfoChan chan){  
 	
-	MyElev:= &
-	LOCAL_ELEVATOR_INFO{
+	MyElev:=
+	&LOCAL_ELEVATOR_INFO{
 		State: idle,
 		Floor: GetFloor(),
 		Direction : MD_Stop,
-		Orders:[NUM_FLOORS][NUM_BUTTON]bool,
+		Orders:[NUM_FLOORS][2]bool,
+		ElevatorID :network.localip.LocalIP(),
 	}
-
-	localElevInit(MyElev)
+	CurrentHMatrix := &HMATRIX
+	localElevInit(MyElev,CurrentHMatrix)
+	ForeignElevs := []FOREIGN_ELEVATOR_INFO
 
 	for{
 		select{
 		case newOrder := <- ElevControlChannels.NewOrders: 
-			AddNewOrdersToLocal(newOrder,MyElev)
-			UpdateLights(MyElev)
+			AddNewOrdersToLocal(newOrder,MyElev,CurrentHMatrix)
+			UpdateLights(MyElev,CurrentHMatrix)
 			ElevInfoChan <- MyElev
-			AddNewOrdersToForeign(newOrder,MyElev)
+			AddNewOrdersToForeign(newOrder,ForeignElevs)
+			ForeignElevsChan<-ForeignElevs
 			redecideChan<-true
 			
 		case newFloor := <- ElevControlChannels.NewFloorChan:
 			if IsOrderAtFloor(newFloor)==1{
-				ArrivedAtOrder() //Opendoors, wait, wait for them to press cab etc
+				ArrivedAtOrder(MyElev) //Opendoors, wait, wait for them to press cab etc
 				finishedOrder:=GetOrder(newfloor,MyElev.MotorDirection)
 				if finishedOrder.BUTTONTYPE==BUTTON_CAB{
 					registerFinishedCabOrder(finishedOrder,MyElev)
-					UpdateLights(MyElev)
+					UpdateLights(MyElev,CurrentHMatrix)
 					ElevInfoChan <- MyElev
 				} else {
 					registerFinishedHallOrder(finishedOrder,MyElev)
 					ElevControlChannels.FinishedOrderChan <- finishedOrder
 				}
 				MyElev.Floor=newFloor
-
 				redecideChan <- true
 			}
 			MyElev.Floor=newFloor
@@ -47,19 +60,26 @@ func RunElevator (chans ElevControlChannels){
 		case newBtnPress := <- ElevControlChannels.NewBtnpressChan:
 			if newBtnPress.BUTTON_TYPE==Button_Cab{
 				addOneNewOrderBtn(newBtnPress,MyElev)
-				UpdateLights(MyElev)
+				UpdateLights(MyElev,CurrentHMatrix)
 				ElevInfoChan <- MyElev
 				ElevControlChannels.redecideChan<-true
 			} else{
-				newHcallRequestChan <- newBtnPress
+				if !IsHOrderActive(newBtnPress,CurrentHMatrix){
+					newHcallRequestChan <- newBtnPress
+				}
 			}
 
 		case ShouldRedecide:= <- ElevControlChannels.redecideChan:
-			ChooseDirectionAndState(MyElev)
+			ChooseDirectionAndState(MyElev, CurrentHMatrix)
 			ElevInfoChan <- MyElev
 			if MyElev.State ==DoorOpen{
 				ElevControlChannels.NewFloorChan <- MyElev.Floor
 			}
+
+		case timeOut := <- TimeOutChan:
+			ElevInfoChan <- MyElev
+			ForeignElevsChan <- ForeignElevs
+
 		}
 	}
 
