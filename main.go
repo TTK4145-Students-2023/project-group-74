@@ -8,16 +8,26 @@ import (
 
 func main() {
     
-    ElevInfoChan := make(chan LOCAL_ELEVATOR_INFO)
-    NewHallRequestChan := make(chan BUTTON_INFO)
-    FinishedHallOrderChan := make(chan BUTTON_TYPE)
+    TxElevInfoChan := make(chan LOCAL_ELEVATOR_INFO)
+    RxElevInfoChan := make(chan LOCAL_ELEVATOR_INFO)
     
-    NewOrdersChan := make(chan map[string][types.NUM_FLOORS][2]bool)
-    NewBtnPressChan := make(chan BUTTON_INFO)
-    NewFloorChan := make(chan int)
+    TxNewHallRequestChan := make(chan BUTTON_INFO)
+    RxNewHallRequestChan := make(chan BUTTON_INFO)
     
+    TxFinishedHallOrderChan := make(chan BUTTON_TYPE)
+    RxFinishedHallOrderChan := make(chan BUTTON_TYPE)
+    
+    TxNewOrdersChan := make(chan map[string][types.NUM_FLOORS][types.NUM_BUTTONS-1]bool)
+    RxNewOrdersChan := make(chan map[string][types.NUM_FLOORS][types.NUM_BUTTONS-1]bool)
+
     TxP2PElevInfoChan := make(chan P2P_ELEV_INFO)
     RxP2PElevInfoChan := make(chan P2P_ELEV_INFO)
+
+
+    NewBtnPressChan := make(chan BUTTON_INFO)
+    NewFloorChan := make(chan int)
+
+    
     
  
     //********** Set Master/Slave flags ************//
@@ -27,8 +37,11 @@ func main() {
     
 
     elev_init()
-  
-    go elev_control.Elev_run(ElevinfoChan,TxP2PElevInfoChan,RxP2PElevInfoChan,NewHallRequestChan,FinishedHallOrderChanNewOrdersChan)
+    go RunElevator(
+        TxElevInfoChan,RxElevInfoChan,TxNewHallRequestChan,RxNewHallRequestChan,
+        TxFinishedHallOrderChan,RxFinishedHallOrderChan,RxNewOrdersChan,
+        TxP2PElevInfoChan,RxP2PElevInfoChan,
+    )
     go network.Network_run(NetworkChns)
     go elevio.PollButtons(ElevControlChns.NewBtnpress)
     go elevio.PollNewFloor(ElevControlChns.NewFloor)

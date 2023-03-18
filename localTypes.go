@@ -35,8 +35,10 @@ type BUTTON_INFO struct{
   Button  BUTTON_TYPE
 }
 
-type HMATRIX [NUM_FLOORS][2]bool
-type ORDER map[string][types.NUM_FLOORS][2]bool
+type HMATRIX [NUM_FLOORS][types.NUM_BUTTONS-1]bool
+type ORDER map[string][types.NUM_FLOORS][types.NUM_BUTTONS-1]bool
+type P2P_ELEV_INFO []LOCAL_ELEVATOR_INFO
+
 
 type FOREIGN_ORDER_TYPE struct{
   Foregin_order BUTTON_INFO 
@@ -58,20 +60,6 @@ type LOCAL_ELEVATOR_INFO struct{
   State       ELEVATOR_STATE
   CabCalls    [NUM_BUTTONS]bool
   ElevID      string   
-}
-
-type FOREIGN_ELEVATOR_INFO struct{
-  Floor       int 
-  Direction   MOTOR_DIR 
-  State       ELEVATOR_STATE
-  Cabcalls    [NUM_BUTTON]bool  
-  ElevatorID  string 
-}
-
-type P2P_ELEV_INFO struct{
-  LocalElev FOREIGN_ELEVATOR_INFO
-  ForeignElev1  FOREIGN_ELEVATOR_INFO
-  ForeignElev2  FOREIGN_ELEVATOR_INFO
 }
 
 type MOTOR_DIR int

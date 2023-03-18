@@ -1,40 +1,22 @@
-package main
+package order_assigner
 
 import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"runtime"
+	"decision/DLOCC"
+	"localTypes"
 )
 
-type HRAElevState struct {
-	State        string              	`json:"behaviour"`
-	Floor    	 int                 	`json:"floor"`
-	Direction    string              	`json:"direction"`
-	CabRequests  [types.NUM_FLOORS]bool `json:"cabRequests"`
-}
 
-type HRAInput struct {
-	HallRequests [types.NUM_FLOORS][2]bool `json:"hallRequests"`
-	States       map[string]HRAElevState   `json:"states"`
-}
 
-type orderAssignerBehavior int
+func orderAssigner(OA OAInputs,
+	RxElevInfoChan <-chan LOCAL_ELEVATOR_INFO, 
+	RxNewHallRequestChan <-chan BUTTON_INFO, 
+	RxFinishedHallOrderChan <-chan BUTTON_INFO,
+	) {
 
-const (
-	OABehaviorMaster orderAssignerBehavior = iota
-	OABehaviorSlave
-)
-
-type OAInputs struct {
-	localIDch          <-chan 	string
-	ordersFromNetwork  <-chan 	HRAInput
-	ordersFromMaster   <-chan 	[]byte
-	ordersToSlave        chan<- []byte
-	localOrder           chan<- [types.NUM_FLOORS][2]bool
-}
-
-func orderAssigner(OA OAInputs) {
 	hraExecutable := ""
 	switch runtime.GOOS {
 	case "linux":
@@ -45,7 +27,12 @@ func orderAssigner(OA OAInputs) {
 		panic("OS not supported")
 	}
 
-	mapOfElevators             := make(map[string]types.ExtendedElevator) //Define a map with information on all elevators
+	go CombineHRAInput(RxElevInfoChan <-chan LOCAL_ELEVATOR_INFO, 
+		RxNewHallRequestChan <-chan BUTTON_INFO, 
+		RxFinishedHallOrderChan <-chan BUTTON_INFO,
+		OA.ordersFromNetwork chan<- HRAInput)
+
+	mapOfElevators := make(map[string]types.HRAElevState) //Define a map with information on all elevators
 	mapOfElevators[elevator.ID] = elevator
 
 	orderActivatedChn   := make(chan types.OrderType)
