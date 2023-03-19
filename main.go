@@ -26,27 +26,32 @@ func main() {
 
     NewBtnPressChan := make(chan BUTTON_INFO)
     NewFloorChan := make(chan int)
+    
 
-    
-    
- 
     //********** Set Master/Slave flags ************//
     myIP := flag.string("My IP", "", "The first IP address")
     flag.Parse()
     master := CompareIPAddr
     
 
-    elev_init()
+    
+    //go network.Network_run(NetworkChns)
+
     go RunElevator(
         TxElevInfoChan,RxElevInfoChan,TxNewHallRequestChan,RxNewHallRequestChan,
         TxFinishedHallOrderChan,RxFinishedHallOrderChan,RxNewOrdersChan,
-        TxP2PElevInfoChan,RxP2PElevInfoChan,
-    )
-    go network.Network_run(NetworkChns)
+        TxP2PElevInfoChan,RxP2PElevInfoChan)
+
+    go OrderAssigner(
+        RxElevInfoChan,RxNewHallRequestChan,RxFinishedHallOrderChan,
+        TxNewOrdersChan,RxNewOrdersChan)
+
+    //go network.Network_run(NetworkChns)
+
     go elevio.PollButtons(ElevControlChns.NewBtnpress)
     go elevio.PollNewFloor(ElevControlChns.NewFloor)
 
-    go network.Network(TxP2PElevInfoChan, RxP2PElevInfoChan)
-
+    //go network.Network(TxP2PElevInfoChan, RxP2PElevInfoChan)
+    select{}
 
 }

@@ -43,42 +43,69 @@ func CombineHRAInput(
 	RxElevInfoChan <-chan LOCAL_ELEVATOR_INFO, 
 	RxNewHallRequestChan <-chan BUTTON_INFO, 
 	RxFinishedHallOrderChan <-chan BUTTON_INFO,
+	TxHRAInputChan chan<- HRAInput)
+	{
 
-	TxHRAInputChan chan<- HRAInput){
+	currentHRAInput := newAllFalseHRAInput()
+	
 
-	currentHRAInput := HRAInput{
-		HallRequests: make([NUM_FLOORS][NUM_BUTTONS-1]bool),
-}
-
-for i := range currentHRAInput.HallRequests {
-    for j := range currentHRAInput.HallRequests[i] {
-        currentHRAInput.HallRequests[i][j] = false
-    }
-}
-
-
-	for{
-		select{
-		case newElevInfo <- RxElevInfoChan:
-			currentHRAInput.States[newElevInfo.ElevatorID]=newElevInfo			
-			TxHRAInputChan <- currentHRAInput
-
-		case newHRequest <-RxNewHallRequestChan:
-			if currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button]==0{
-				currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button]=1
+		for{
+			select{
+			case newElevInfo <- RxElevInfoChan:
+				currentHRAInput.States[newElevInfo.ElevatorID]=newElevInfo			
 				TxHRAInputChan <- currentHRAInput
-			}
 
-		case finishedHOrder <- RxFinishedHallOrderChan:
-			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button]=0
-			TxHRAInputChan <- currentHRAInput
+			case newHRequest <-RxNewHallRequestChan:
+				if currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button]==0{
+					currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button]=1
+					TxHRAInputChan <- currentHRAInput
+				}
 
-		case initInfo <- InitInfoChan:
+			case finishedHOrder <- RxFinishedHallOrderChan:
+				currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button]=0
+				TxHRAInputChan <- currentHRAInput
 
-		default:
+			case initInfo <- InitInfoChan:
+
+			default:
 
 		}
 	}
 }
 	
 
+func newAllFalseHRAInput() HRAInput{
+	output:= HRAInput{
+		HallRequests: make([NUM_FLOORS][NUM_BUTTONS-1]bool),
+	}
+
+	for i := range output.HallRequests {
+		for j := range output.HallRequests[i] {
+			output.HallRequests[i][j] = false
+		}
+	}
+	return output
+}
+
+func ReassignOrders(newHRAInput HRAInput, hraExecutable string) map[string][types.NUM_FLOORS][types.NUM_BUTTONS-1]bool{
+	jsonBytes, err := json.Marshal(newHRAInput)
+	if err != nil {
+		fmt.Println("json.Marshal error: ", err)
+		return
+	}
+
+	ret, err := exec.Command("../hall_request_assigner/"+ hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+	if err != nil {
+		fmt.Println("exec.Command error: ", err)
+		fmt.Println(string(ret))
+		return
+	}
+
+	output := map[string][types.NUM_FLOORS][2]bool{}
+	err = json.Unmarshal(ret, &output)
+	if err != nil {
+		fmt.Println("json.Unmarshal error: ", err)
+		return
+	}
+	return output
+}

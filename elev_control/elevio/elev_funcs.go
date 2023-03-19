@@ -1,11 +1,110 @@
 package elev_control
 
+// used as goroutine
+
+func ArrivedAtOrder(
+	MyElev *LOCAL_ELEVATOR_INFO,
+	newFloor int,
+	TxElevInfoChan chan<- LOCAL_ELEVATOR_INFO,
+	RxElevInfoChan chan<- LOCAL_ELEVATOR_INFO){
+	
+	Myelev.Direction=MD_Stop
+	MyElev.Floor=newfloor
+	MyElev.State=DoorOpen
+	SetMotorDirection(MD_Stop)
+
+	if IsMaster(MyElev.ElevatorID,peers.Peers)==true{
+		RxElevInfoChan <- MyElev
+	}else TxElevInfoChan <- MyElev
+
+	SetDoorOpenLamp(true)
+	doorTimer=time.NewTimer(3 * time.Second)
+	for time.Since(doorTimer.StartTime()) <= 3 * time.Second{
+		Sleep(100*time.Millisecond)
+	}
+	doorTimer.Stop()
+	SetDoorOpenLamp(false)
+	MyElev.State=Idle
+}
+
+func SendWithDelay(foreignElevs P2P_ELEV_INFO,TxChannel chan<- P2P_ELEV_INFO){
+	timer := time.NewTimer( P2P_UPDATE_INTERVAL* time.Second)
+    <-timer.C
+    TxChannel <- foreignElevs
+}
+// Private funcs
 func ChooseDirectionAndState(MyElev *LOCAL_ELEVATOR_INFO, MyOrders HMATRIX) {
 	newDirAndState[2]=findDirection(MyElev)
 	SetMotorDirection(newDirAndState[0])
 	MyElev.MotorDirection=newDirAndState[0]
 	MyElev.State=newDirAndState[1]	
 }
+
+func IsHOrderActive(newOrder BUTTON_INFO, CurrentHMatrix HMATRIX) bool{ //neccecary?
+	if CurrentHMatrix[newOrder.floor][newOrder.button]==0{
+		return false
+	}
+	return true
+}
+
+func IsOrderAtFloor(MyElev LOCAL_ELEVATOR_INFO) bool {
+	btntype := dir2Btntype(MyElev.motordirection)
+	if MyElev.Orders[GetFloor()][btntype] == 1 {
+		return true
+	}
+	return false
+}
+
+func AddNewOrders(newOrder ORDER, MyOrders *HMATRIX,CombinedHMatrix *HMATRIX){
+	addNewOrdersToLocal(newOrder,MyOrders)
+	addNewOrdersToHMatrix(newOrder,CombinedHMatrix)
+}
+
+func AddLocalToForeignInfo(MyElev LOCAL_ELEVATOR_INFO, ForeignElevs *P2P_ELEV_INFO){
+	for ForeignElev:=0;ForeignElev<len(ForeignElevs);ForeignElev++{
+		if ForeignElevs[ForeignElev].ElevID==MyElev.ElevID{
+			ForeignElevs[ForeignElev]=MyElev
+		}
+	}
+}
+
+func UpdateOrderLights(MyElev LOCAL_ELEV_INFO, CurrentHMatrix HMATRIX){
+	for f:=0;f<NUM_FLOORS;f++{
+		SetButtonLamp(BUTTON_CAB,f,MyElev.CabCalls[f])
+		for btn:=0;btn<NUM_BUTTONS-1;btn++{
+			SetButtonLamp(btn,f,CurrentHMatrix[f][btn])
+		}
+	}
+}
+
+func LocalElevInitFloor(MyElev *LOCAL_ELEVATOR_INFO){
+	for GetFloor() == -1 {
+		SetMotorDirection(MD_Down)
+	}
+		SetMotorDirection(MD_Stop)
+	MyElev.Floor=GetFloor()
+}
+
+func GetFinOrder(floor int, pastDir MotorDirection)BUTTON_INFO{
+	btn:=dir2Btntype(pastDir)
+	return btninfo:= BUTTON_INFO{
+		Button: btn
+		Floor: floor
+	}
+}
+
+func RemoveOneOrderBtn(finishedOrder BUTTON_INFO, MyElev *LOCAL_ELEV_INFO){
+	MyElev.Orders[finishedOrder.floor][finishedOrder.button]=0
+}
+
+func AddOneNewOrderBtn(newOrder BUTTON_INFO, MyElev *LOCAL_ELEVATOR_INFO){ //neccecary?
+	if MyElev.Orders[newOrder.floor][newOrder.button]==0{
+		MyElev.Orders[newOrder.floor][newOrder.button]=1
+	}
+}
+
+//Internal funcs
+
 
 func findDirection(MyElev LOCAL_ELEVATOR_INFO, MyOrders HMATRIX) [2]int {
 	switch{
@@ -39,30 +138,6 @@ func findDirection(MyElev LOCAL_ELEVATOR_INFO, MyOrders HMATRIX) [2]int {
 	}
 }
 
-func addOneNewOrderBtn(newOrder BUTTON_INFO, MyElev *LOCAL_ELEVATOR_INFO){ //neccecary?
-	if MyElev.Orders[newOrder.floor][newOrder.button]==0{
-		MyElev.Orders[newOrder.floor][newOrder.button]=1
-	}
-}
-
-func removeOneOrderBtn(finishedOrder BUTTON_INFO, MyElev *LOCAL_ELEV_INFO){
-	MyElev.Orders[finishedOrder.floor][finishedOrder.button]=0
-}
-
-func IsHOrderActive(newOrder BUTTON_INFO, CurrentHMatrix HMATRIX) bool{ //neccecary?
-	if CurrentHMatrix[newOrder.floor][newOrder.button]==0{
-		return false
-	}
-	return true
-}
-
-func IsOrderAtFloor(MyElev LOCAL_ELEVATOR_INFO) bool {
-	btntype := dir2Btntype(MyElev.motordirection)
-	if MyElev.Orders[GetFloor()][btntype] == 1 {
-		return true
-	}
-	return false
-}
 
 func dir2Btntype(dir motordirection) ButtonType {
 	if dir == MD_Up {
@@ -74,13 +149,7 @@ func dir2Btntype(dir motordirection) ButtonType {
 	}
 }
 
-func localElevInitFloor(MyElev *LOCAL_ELEVATOR_INFO){
-	for GetFloor() == -1 {
-		SetMotorDirection(MD_Down)
-	}
-		SetMotorDirection(MD_Stop)
-	MyElev.Floor=GetFloor()
-}
+
 
 func requests_here(myElev LOCAL_ELEV_INFO,MyOrders HMATRIX)bool{
 	totalOrders:= append(MyElev.CabCalls[:],MyOrders)
@@ -116,12 +185,6 @@ func requests_below(myElev LOCAL_ELEV_INFO,MyOrders HMATRIX)bool{
 	return false
 }
 
-
-func AddNewOrders(newOrder ORDER, MyOrders *HMATRIX,CombinedHMatrix *HMATRIX){
-	addNewOrdersToLocal(newOrder,MyOrders)
-	addNewOrdersToHMatrix(newOrder,CombinedHMatrix)
-}
-
 func addNewOrdersToLocal(newOrder ORDER, MyOrders *HMATRIX){
 	for f:=0;f<NUM_FLOORS;f++{
 		for btn:=0;btn<NUM_BUTTON-1;btn++{
@@ -144,63 +207,4 @@ func addNewOrdersToHMatrix(newOrder ORDER,CombinedHMatrix *HMATRIX){
 			}
 		}	 
 	}
-}
-
-
-func AddLocalToForeignInfo(MyElev LOCAL_ELEVATOR_INFO, ForeignElevs *P2P_ELEV_INFO){
-	for ForeignElev:=0;ForeignElev<len(ForeignElevs);ForeignElev++{
-		if ForeignElevs[ForeignElev].ElevID==MyElev.ElevID{
-			ForeignElevs[ForeignElev]=MyElev
-		}
-	}
-}
-
-func updateLights(MyElev LOCAL_ELEV_INFO, CurrentHMatrix HMATRIX){
-	for f:=0;f<NUM_FLOORS;f++{
-		SetButtonLamp(BUTTON_CAB,f,MyElev.CabCalls[f])
-		for btn:=0;btn<NUM_BUTTONS-1;btn++{
-			SetButtonLamp(btn,f,CurrentHMatrix[f][btn])
-		}
-	}
-}
-
-//undefined funcs
-
-/*  
-	if foreignelevs.ElevID in newOrder.key
-		update the current foreignorder. // Only needs to update foreignelevs with the neworders if neworders should contain MyOrders as well. 
-*/	
-
-
-func ArrivedAtOrder(
-	MyElev *LOCAL_ELEVATOR_INFO,
-	newFloor int,
-	TxElevInfoChan chan<- LOCAL_ELEVATOR_INFO,
-	RxElevInfoChan chan<- LOCAL_ELEVATOR_INFO){
-	
-	Myelev.Direction=MD_Stop
-	MyElev.Floor=newfloor
-	MyElev.State=DoorOpen
-	SetMotorDirection(MD_Stop)
-
-	if IsMaster(MyElev.ElevatorID,peers.Peers)==true{
-		RxElevInfoChan <- MyElev
-	}else TxElevInfoChan <- MyElev
-
-	SetDoorOpenLamp(true)
-	doorTimer=time.NewTimer(3 * time.Second)
-	for time.Since(doorTimer.StartTime()) <= 3 * time.Second{
-		Sleep(100*time.Millisecond)
-	}
-	doorTimer.Stop()
-	SetDoorOpenLamp(false)
-	MyElev.State=Idle
-}
-
-
-func registerFinishedCabOrder(finishedOrder BUTTON_INFO, MyElev *LOCAL_ELEV_INFO){
-}
-
-func registerFinishedHallOrder(finishedOrder BUTTON_INFO, MyElev *LOCAL_ELEV_INFO){
-
 }

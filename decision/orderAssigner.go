@@ -11,11 +11,15 @@ import (
 
 
 
-func orderAssigner(OA OAInputs,
+func OrderAssigner(
 	RxElevInfoChan <-chan LOCAL_ELEVATOR_INFO, 
 	RxNewHallRequestChan <-chan BUTTON_INFO, 
 	RxFinishedHallOrderChan <-chan BUTTON_INFO,
+	TxNewOrdersChan chan<- map[string][types.NUM_FLOORS][types.NUM_BUTTONS-1]bool
+	RxNewOrdersChan chan<- map[string][types.NUM_FLOORS][types.NUM_BUTTONS-1]bool
 	) {
+
+	ordersFromNetwork := make(chan HRAInput)
 
 	hraExecutable := ""
 	switch runtime.GOOS {
@@ -27,36 +31,43 @@ func orderAssigner(OA OAInputs,
 		panic("OS not supported")
 	}
 
-	go CombineHRAInput(RxElevInfoChan <-chan LOCAL_ELEVATOR_INFO, 
+	go CombineHRAInput(
+		RxElevInfoChan <-chan LOCAL_ELEVATOR_INFO, 
 		RxNewHallRequestChan <-chan BUTTON_INFO, 
 		RxFinishedHallOrderChan <-chan BUTTON_INFO,
-		OA.ordersFromNetwork chan<- HRAInput)
+		ordersFromNetwork chan<- HRAInput)
 
-	mapOfElevators := make(map[string]types.HRAElevState) //Define a map with information on all elevators
+	/*mapOfElevators := make(map[string]types.HRAElevState) //Define a map with information on all elevators
 	mapOfElevators[elevator.ID] = elevator
 
 	orderActivatedChn   := make(chan types.OrderType)
 	orderDeactivatedChn := make(chan types.OrderType)
 	orderTimedOutChn    := make(chan types.OrderType)
 
+	*/
+	
+	localID := network.MyIp
+	IsMaster := IsMaster(MyElev.ElevatorID,peers.Peers)
 
-	localID := ""
-	assignerBehavior := OABehaviorSlave
-	//merge new hall-requests 
-		//update buttons true/false
-	//disconnected elevator 
-	//foregin elevator 
-	//local elevator -> prioritize cab 
+
 	for {
 		select {
-		case localID = <-OA.localIDch:
-		case assignerBehavior = <-orderAssignerBehaviorCh: // define this channel
-		case givenOrders := <-OA.ordersFromNetwork:
+		//case localID = <-OA.localIDch:
+		//case assignerBehavior = <-orderAssignerBehaviorCh: // define this channel
+		case newHRAInput := <-ordersFromNetwork:
 			fmt.Printf("")
-			switch assignerBehavior {
-			case OABehaviorSlave: //This is info from the slaves, master vil send out 
-			case OABehaviorMaster:
-				jsonBytes, err := json.Marshal(givenOrders)
+			if IsMaster{
+				newOrders:= ReassignOrders(newHRAInput,hraExecutable)
+
+				TxNewOrdersChan <- newOrders
+				RxNewOrdersChan <- newOrders
+			}
+		default: 
+
+			/*switch IsMaster {
+			case false: //This is info from the slaves, master vil send out 
+			case true:
+				jsonBytes, err := json.Marshal(newHRAInput)
 				if err != nil {
 					fmt.Println("json.Marshal error: ", err)
 					return
@@ -75,14 +86,17 @@ func orderAssigner(OA OAInputs,
 					fmt.Println("json.Unmarshal error: ", err)
 					return
 				}
-
+				TxNewOrdersChan <- output
+				RxNewOrdersChan <- output
+				
+				
 				if localHallOrders, ok := output[localID]; ok {
 					OA.localOrder <- localHallOrders
 				}
 
 				OA.ordersToSlave <- ret
 			}
-		case givenOrders := <-OA.ordersFromMaster:
+		case newOrdersInByteFormat := <-OA.ordersFromMaster:
 			switch assignerBehavior {
 			case OABehaviorMaster: //Do nothing since this is from master
 			case OABehaviorSlave:
@@ -96,7 +110,7 @@ func orderAssigner(OA OAInputs,
 				if localHallOrders, ok := output[localID]; ok {
 					OA.localOrder <- localHallOrders
 				}
-			}
+			}*/
 		}
 	}
 }

@@ -36,7 +36,7 @@ func RunElevator(
 		CabCalls:[NUM_FLOORS]bool,
 		ElevatorID :network.MyIP,
 	}
-	localElevInitFloor(MyElev)
+	LocalElevInitFloor(MyElev)
 	MyOrders := &HMATRIX // FOR DRIVING combined with myCabCalls 
 	CombinedHMatrix := &HMATRIX // FOR LIGHTS and reboot if you become master 
 	ForeignElevs := &[]FOREIGN_ELEVATOR_INFO
@@ -52,7 +52,7 @@ func RunElevator(
 		select{
 		case newOrder := <- RxNewOrdersChan: 
 			AddNewOrders(newOrder,MyOrders,CombinedHMatrix)
-			UpdateLights(MyElev,CombinedHMatrix)
+			UpdateOrderLights(MyElev,CombinedHMatrix)
 			ForeignElevsChan<-ForeignElevs
 			redecideChan<-true
 			
@@ -61,10 +61,10 @@ func RunElevator(
 			if IsOrderAtFloor(newFloor)==1{
 				PastElev:=MyElev
 				go ArrivedAtOrder(MyElev,newFloor) //Opendoors, wait, wait for them to press cab etc
-				finishedOrder:=GetOrder(newfloor,PastElev.MotorDirection)
+				finishedOrder:=GetFinOrder(newfloor,PastElev.MotorDirection)
 				if finishedOrder.BUTTONTYPE==BUTTON_CAB{
-					removeOneOrderBtn(finishedOrder,MyElev)
-					UpdateLights(MyElev,CombinedHMatrix)
+					RemoveOneOrderBtn(finishedOrder,MyElev)
+					UpdateOrderLights(MyElev,CombinedHMatrix)
 				} else {
 					ElevControlChannels.FinishedOrderChan <- finishedOrder
 				}				
@@ -74,8 +74,8 @@ func RunElevator(
 
 		case newBtnPress := <- NewBtnPressChan:
 			if newBtnPress.BUTTON_TYPE==Button_Cab{
-				addOneNewOrderBtn(newBtnPress,MyElev)
-				UpdateLights(MyElev,CombinedHMatrix)
+				AddOneNewOrderBtn(newBtnPress,MyElev)
+				UpdateOrderLights(MyElev,CombinedHMatrix)
 				redecideChan<-true
 			} else{
 				if !IsHOrderActive(newBtnPress,CombinedHMatrix){
@@ -104,20 +104,16 @@ func RunElevator(
 		case NewForeignInfo <- RxP2PElevInfoChan:
 			ForeignElevs=NewForeignInfo
 			AddLocalToForeignInfo(MyElev,ForeignElevs)
-			TxP2PElevInfoChan<-ForeignElevs
-
-		case timeOut := <- TimeOutChan:
-			if IsMaster(MyElev.ElevatorID,peers.Peers)==true{
-				RxElevInfoChan <- MyElev
-			}else {TxElevInfoChan <- MyElev}
-			TxP2PElevInfoChan <- ForeignElevs
-
+			go SendWithDelay(ForeignElevs, TxP2PElevInfoChan)
 			
 		default:
 			if timeOutTimer==nil{
 				timeOutTimer=time.NewTimer(3 * time.Second)
 			}else if time.Since(timeOutTimer.StartTime()) >= 3 * time.Second{
-				timeOutChan<-true
+				if IsMaster(MyElev.ElevatorID,peers.Peers)==true{
+					RxElevInfoChan <- MyElev
+				}else {TxElevInfoChan <- MyElev}
+				TxP2PElevInfoChan <- ForeignElevs
 				timeOutTimer.Stop()
 				timeOutTimer=nil
 			}
