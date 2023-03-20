@@ -2,7 +2,9 @@ package decision
 
 import (
 	"fmt"
-	"localTypes"
+	"project-group-74/localTypes"
+	"project-group-74/decision/DLOCC"
+	"project-group-74/network"
 	"runtime"
 )
 
@@ -14,7 +16,7 @@ func OrderAssigner(
 	RxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
 ) {
 
-	ordersFromNetwork := make(chan decision_types.HRAInput)
+	ordersFromNetwork := make(chan localTypes.HRAInput)
 
 	hraExecutable := ""
 	switch runtime.GOOS {
@@ -26,7 +28,7 @@ func OrderAssigner(
 		panic("OS not supported")
 	}
 
-	go CombineHRAInput(
+	go DLOCC.CombineHRAInput(
 		RxElevInfoChan,
 		RxNewHallRequestChan,
 		RxFinishedHallOrderChan,
@@ -40,9 +42,7 @@ func OrderAssigner(
 	orderTimedOutChn    := make(chan types.OrderType)
 
 	*/
-
-	localID := network.MyIp
-	IsMaster := IsMaster(MyElev.ElevatorID, peers.Peers)
+	
 
 	for {
 		select {
@@ -50,13 +50,13 @@ func OrderAssigner(
 		//case assignerBehavior = <-orderAssignerBehaviorCh: // define this channel
 		case newHRAInput := <-ordersFromNetwork:
 			fmt.Printf("")
-			if IsMaster {
-				newOrders := ReassignOrders(newHRAInput, hraExecutable)
+			if localTypes.IsMaster(network.MyIP, network.PeerList.Peers) {
+				newOrders := DLOCC.ReassignOrders(newHRAInput, hraExecutable)
 
 				TxNewOrdersChan <- newOrders
 				RxNewOrdersChan <- newOrders
 			}
-		default:
+		default:	
 
 			/*switch IsMaster {
 				case false: //This is info from the slaves, master vil send out
