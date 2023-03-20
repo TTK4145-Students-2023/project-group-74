@@ -179,3 +179,4 @@ func CompareIPAddr (MyIP string, Peers []string)bool{
 func IsMaster(MyIP string, Peers []string)bool{
   return CompareIPAddr(MyIP, Peers)
 }
+
