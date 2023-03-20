@@ -1,12 +1,11 @@
 package DLOCC
 
 import (
-	"config"
-	"localTypes"
+	"project-group-74/localTypes"
 	"time"
 )
 
-const ORDER_WATCHDOG_POLL_RATE = config.ORDER_WATCHDOG_POLL_RATE_MS * time.Millisecond
+const ORDER_WATCHDOG_POLL_RATE = 50 * time.Millisecond
 
 type HRAElevState struct {
 	State       string                      `json:"behaviour"`
@@ -28,9 +27,9 @@ const (
 )
 
 type OAInputs struct {
-	localIDch         <-chan string
-	ordersFromNetwork <-chan HRAInput
-	ordersFromMaster  <-chan []byte
-	ordersToSlave     chan<- []byte
-	localOrder        chan<- [localTypes.NUM_FLOORS][2]bool
+	localIDch         <-chan   string
+	ordersFromNetwork <-chan   HRAInput
+	ordersFromMaster  <-chan   []byte
+	ordersToSlave       chan<- []byte
+	localOrder          chan<- [localTypes.NUM_FLOORS][2]bool
 }
