@@ -1,4 +1,4 @@
-package decision
+package DLOCC
 
 import (
 	"config"

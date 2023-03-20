@@ -41,10 +41,9 @@ type P2P_ELEV_INFO []LOCAL_ELEVATOR_INFO
 
 
 type FOREIGN_ORDER_TYPE struct{
-  Foregin_order BUTTON_INFO 
+  Foreign_order BUTTON_INFO
   Active        bool 
-  Local         bool 
-  New           bool 
+  Local         bool
 }
 
 type ELEVATOR_STATE int

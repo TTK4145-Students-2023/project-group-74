@@ -1,43 +1,43 @@
-package decision
+package DLOCC
 
 import (
 	"encoding/json"
 	"fmt"
-	"localTypes"
+	"project-group-74/localTypes"
 	"os/exec"
 	"time"
 )
 
 func orderWatchdog(
-	orderActivatedChn <-chan types.OrderType,
-	orderDeactivatedChn <-chan types.OrderType,
-	orderTimedOutChn chan<- types.OrderType) {
+	orderActivatedChn <-chan localTypes.FOREIGN_ORDER_TYPE,
+	orderDeactivatedChn <-chan localTypes.FOREIGN_ORDER_TYPE,
+	orderTimedOutChn chan<- localTypes.FOREIGN_ORDER_TYPE) {
 
-	var orderTimeouts [types.NUM_FLOORS][types.NUM_BUTTONS]time.Time
+	var orderTimeouts [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]time.Time
 	var zeroTime = time.Time{}
 	pollOrderTimeoutsTicker := time.NewTicker(ORDER_WATCHDOG_POLL_RATE)
 
 	for {
 		select {
 		case order := <-orderActivatedChn:
-			timeout := orderTimeouts[order.Floor][order.Button]
+			timeout := orderTimeouts[order.Foreign_order.Floor][order.Foreign_order.Button]
 			if timeout.IsZero() {
-				orderTimeouts[order.Floor][order.Button] = time.Now().Add(ORDER_TIMEOUT_PERIOD)
+				orderTimeouts[order.Foreign_order.Floor][order.Foreign_order.Button] = time.Now().Add(localTypes.MAX_TIME_TO_FINISH_ORDER)
 			}
 
 		case order := <-orderDeactivatedChn:
-			orderTimeouts[order.Floor][order.Button] = zeroTime
+			orderTimeouts[order.Foreign_order.Floor][order.Foreign_order.Button] = zeroTime
 
 		case <-pollOrderTimeoutsTicker.C:
-			for floor := 0; floor < types.NUM_FLOORS; floor++ {
-				for button := 0; button < types.NUM_BUTTONS; button++ {
+			for floor := 0; floor < localTypes.NUM_FLOORS; floor++ {
+				for button := 0; button < localTypes.NUM_BUTTONS; button++ {
 					timeout := orderTimeouts[floor][button]
 
 					if !timeout.IsZero() && timeout.Before(time.Now()) {
 						orderTimeouts[floor][button] = zeroTime
-						var order types.OrderType
+						var order localTypes.ORDER
 						order.Floor = floor
-						order.Button = types.ButtonType(button)
+						order.Button = localTypes.BUTTON_TYPE(button)
 
 						orderTimedOutChn <- order
 					}

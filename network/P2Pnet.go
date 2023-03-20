@@ -17,6 +17,9 @@ const (
 
 var MyIP string
 
+var PeerList peers.PeerUpdate
+
+
 // ************** main P2P func *************
 func P2Pnet(
 	TxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
