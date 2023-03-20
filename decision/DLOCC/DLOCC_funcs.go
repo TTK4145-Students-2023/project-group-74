@@ -3,15 +3,16 @@ package DLOCC
 import (
 	"encoding/json"
 	"fmt"
-	"project-group-74/localTypes"
 	"os/exec"
 	"time"
+	"project-group-74/localTypes"
+	"project-group-74/decision"
 )
 
 func orderWatchdog(
-	orderActivatedChn <-chan localTypes.FOREIGN_ORDER_TYPE,
-	orderDeactivatedChn <-chan localTypes.FOREIGN_ORDER_TYPE,
-	orderTimedOutChn chan<- localTypes.FOREIGN_ORDER_TYPE) {
+	orderActivatedChn     <-chan   localTypes.BUTTON_INFO,
+	orderDeactivatedChn   <-chan   localTypes.BUTTON_INFO,
+	orderTimedOutChn 	chan<- localTypes.BUTTON_INFO) {
 
 	var orderTimeouts [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]time.Time
 	var zeroTime = time.Time{}
@@ -20,13 +21,13 @@ func orderWatchdog(
 	for {
 		select {
 		case order := <-orderActivatedChn:
-			timeout := orderTimeouts[order.Foreign_order.Floor][order.Foreign_order.Button]
+			timeout := orderTimeouts[order.Floor][order.Button]
 			if timeout.IsZero() {
-				orderTimeouts[order.Foreign_order.Floor][order.Foreign_order.Button] = time.Now().Add(localTypes.MAX_TIME_TO_FINISH_ORDER)
+				orderTimeouts[order.Floor][order.Button] = time.Now().Add(localTypes.MAX_TIME_TO_FINISH_ORDER)
 			}
 
 		case order := <-orderDeactivatedChn:
-			orderTimeouts[order.Foreign_order.Floor][order.Foreign_order.Button] = zeroTime
+			orderTimeouts[order.Floor][order.Button] = zeroTime
 
 		case <-pollOrderTimeoutsTicker.C:
 			for floor := 0; floor < localTypes.NUM_FLOORS; floor++ {
@@ -35,7 +36,7 @@ func orderWatchdog(
 
 					if !timeout.IsZero() && timeout.Before(time.Now()) {
 						orderTimeouts[floor][button] = zeroTime
-						var order localTypes.ORDER
+						var order localTypes.BUTTON_INFO
 						order.Floor = floor
 						order.Button = localTypes.BUTTON_TYPE(button)
 
@@ -48,26 +49,36 @@ func orderWatchdog(
 }
 
 func CombineHRAInput(
-	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
-	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
-	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
-	TxHRAInputChan chan<- localTypes.HRAInput) {
+	RxElevInfoChan 		<-chan 	 localTypes.LOCAL_ELEVATOR_INFO,
+	RxNewHallRequestChan 	<-chan 	 localTypes.BUTTON_INFO,
+	RxFinishedHallOrderChan <-chan 	 localTypes.BUTTON_INFO,
+	TxHRAInputChan 		  chan<- localTypes.HRAInput) {
 
 	currentHRAInput := newAllFalseHRAInput()
 
 	for {
 		select {
 		case newElevInfo := <-RxElevInfoChan:
+			//if newElevInfo.State !isValid() || !isValidID(newElevInfo.ElevID){
+			//	panic("Corrupt elevator data from RxElevInfoChan")
+			//}
 			currentHRAInput.States[newElevInfo.ElevatorID] = newElevInfo
 			TxHRAInputChan <- currentHRAInput
+			
 
 		case newHRequest := <-RxNewHallRequestChan:
+			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
+			//	panic("Corrupt elevator data from RxNewHallRequestChan")
+			//}
 			if currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] == 0 {
 				currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] = 1
 				TxHRAInputChan <- currentHRAInput
 			}
 
 		case finishedHOrder := <-RxFinishedHallOrderChan:
+			//if !isValidFloor(finishedHOrder.Floor) || finishedHOrder.Button !isValid(){
+			//	panic("Corrupt elevator data from RxFinishedHallOrderChan")
+			//}
 			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = 0
 			TxHRAInputChan <- currentHRAInput
 
@@ -97,7 +108,7 @@ func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[s
 		return
 	}
 
-	ret, err := exec.Command("../hall_request_assigner/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+	ret, err := exec.Command("project-group-74/decision/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
 	if err != nil {
 		fmt.Println("exec.Command error: ", err)
 		fmt.Println(string(ret))
