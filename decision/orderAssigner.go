@@ -3,20 +3,19 @@ package decision
 import (
 	"fmt"
 	"project-group-74/localTypes"
-	"project-group-74/decision/DLOCC"
 	"project-group-74/network"
 	"runtime"
 )
 
 func OrderAssigner(
-	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
-	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
-	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
-	TxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
-	RxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	RxElevInfoChan 		<-chan   locallocalTypes.LOCAL_ELEVATOR_INFO,
+	RxNewHallRequestChan 	<-chan   locallocalTypes.BUTTON_INFO,
+	RxFinishedHallOrderChan <-chan 	 locallocalTypes.BUTTON_INFO,
+	TxNewOrdersChan           chan<- map[string][locallocalTypes.NUM_FLOORS][locallocalTypes.NUM_BUTTONS - 1]bool,
+	RxNewOrdersChan           chan<- map[string][locallocalTypes.NUM_FLOORS][locallocalTypes.NUM_BUTTONS - 1]bool,
 ) {
 
-	ordersFromNetwork := make(chan localTypes.HRAInput)
+	ordersFromNetwork := make(chan locallocalTypes.HRAInput)
 
 	hraExecutable := ""
 	switch runtime.GOOS {
@@ -34,12 +33,12 @@ func OrderAssigner(
 		RxFinishedHallOrderChan,
 		ordersFromNetwork)
 
-	/*mapOfElevators := make(map[string]types.HRAElevState) //Define a map with information on all elevators
+	/*mapOfElevators := make(map[string]localTypes.HRAElevState) //Define a map with information on all elevators
 	mapOfElevators[elevator.ID] = elevator
 
-	orderActivatedChn   := make(chan types.OrderType)
-	orderDeactivatedChn := make(chan types.OrderType)
-	orderTimedOutChn    := make(chan types.OrderType)
+	orderActivatedChn   := make(chan localTypes.OrderType)
+	orderDeactivatedChn := make(chan localTypes.OrderType)
+	orderTimedOutChn    := make(chan localTypes.OrderType)
 
 	*/
 	
@@ -74,7 +73,7 @@ func OrderAssigner(
 						return
 					}
 
-					output := map[string][types.NUM_FLOORS][2]bool{}
+					output := map[string][localTypes.NUM_FLOORS][2]bool{}
 					err = json.Unmarshal(ret, &output)
 					if err != nil {
 						fmt.Println("json.Unmarshal error: ", err)
@@ -94,7 +93,7 @@ func OrderAssigner(
 				switch assignerBehavior {
 				case OABehaviorMaster: //Do nothing since this is from master
 				case OABehaviorSlave:
-					output := map[string][types.NUM_FLOORS][2]bool{}
+					output := map[string][localTypes.NUM_FLOORS][2]bool{}
 					err := json.Unmarshal(givenOrders, &output)
 					if err != nil {
 						fmt.Println("json.Unmarshal error: ", err)
