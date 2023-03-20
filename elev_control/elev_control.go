@@ -1,9 +1,9 @@
 package elev_control
 
 import (
-	"localTypes"
-	"peers"
+	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
+	"project-group-74/network"
 	"time"
 )
 
@@ -28,20 +28,22 @@ func RunElevator(
 	NewBtnPressChan <-chan localTypes.BUTTON_INFO) {
 
 	redecideChan := make(chan bool)
-	timeOutChan := make(chan bool)
 
 	MyElev :=
-		&localTypes.LOCAL_ELEVATOR_INFO{
-			State:      localTypes.idle,
-			Floor:      GetFloor(),
-			Direction:  localTypes.MD_Stop,
-			CabCalls:   [localTypes.NUM_FLOORS]bool,
-			ElevatorID: network.MyIP,
+		localTypes.LOCAL_ELEVATOR_INFO{
+			State:     localTypes.Idle,
+			Floor:     elevio.GetFloor(),
+			Direction: localTypes.DIR_stop,
+			CabCalls:  [localTypes.NUM_FLOORS]bool{},
+			ElevID:    network.MyIP,
 		}
-	LocalElevInitFloor(MyElev)
-	MyOrders := &localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
-	CombinedHMatrix := &localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
-	ForeignElevs := &[]localTypes.P2P_ELEV_INFO
+
+	MyElevPtr := &MyElev
+	elevio.LocalElevInitFloor(MyElevPtr)
+	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
+	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
+	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
+	ForeignElevsPtr := &ForeignElevs
 	var timeOutTimer = time.Now()
 	var bufferTimer *time.Timer = nil
 	/*
@@ -53,22 +55,22 @@ func RunElevator(
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-			AddNewOrders(newOrder, MyOrders, CombinedHMatrix, MyElev)
-			UpdateOrderLights(MyElev, CombinedHMatrix)
-			ForeignElevsChan <- ForeignElevs
+			elevio.AddNewOrders(newOrder, &MyOrders, &CombinedHMatrix)
+			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+			TxP2PElevInfoChan <- ForeignElevs
 			redecideChan <- true
 
 		case newFloor := <-NewFloorChan:
-			SetFloorIndicator(newFloor)
-			if IsOrderAtFloor(newFloor) == 1 {
+			elevio.SetFloorIndicator(newFloor)
+			if elevio.IsOrderAtFloor(MyElev, MyOrders) == true {
 				PastElev := MyElev
-				go ArrivedAtOrder(MyElev, newFloor) //Opendoors, wait, wait for them to press cab etc
-				finishedOrder := GetFinOrder(newfloor, PastElev.MotorDirection)
-				if finishedOrder.BUTTONTYPE == localTypes.BUTTON_CAB {
-					RemoveOneOrderBtn(finishedOrder, MyElev)
-					UpdateOrderLights(MyElev, CombinedHMatrix)
+				go elevio.ArrivedAtOrder(MyElevPtr) //Opendoors, wait, wait for them to press cab etc
+				finishedOrder := elevio.GetFinOrder(newfloor, PastElev.Direction)
+				if finishedOrder.Button == localTypes.Button_Cab {
+					elevio.RemoveOneOrderBtn(finishedOrder, MyElevPtr)
+					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				} else {
-					if IsMaster(MyElev.ElevatorID, peers.Peers) == true {
+					if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
 						RxFinishedHallOrderChan <- finishedOrder
 					} else {
 						TxFinishedHallOrderChan <- finishedOrder
@@ -80,13 +82,13 @@ func RunElevator(
 			redecideChan <- true
 
 		case newBtnPress := <-NewBtnPressChan:
-			if newBtnPress.BUTTON_TYPE == localTypes.Button_Cab {
-				AddOneNewOrderBtn(newBtnPress, MyElev)
-				UpdateOrderLights(MyElev, CombinedHMatrix)
+			if newBtnPress.Button == localTypes.Button_Cab {
+				elevio.AddOneNewOrderBtn(newBtnPress, MyElevPtr)
+				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				redecideChan <- true
 			} else {
-				if !IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					if IsMaster(MyElev.ElevatorID, peers.Peers) == true {
+				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
+					if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
 						RxNewHallRequestChan <- newBtnPress
 					} else {
 						TxNewHallRequestChan <- newBtnPress
@@ -96,7 +98,7 @@ func RunElevator(
 			}
 
 		case <-redecideChan:
-			if MyElev.State == localTypes.DoorOpen {
+			if MyElev.State == localTypes.Door_open {
 				bufferTimer = time.NewTimer(3 * time.Second)
 				break
 			} else if time.Since(bufferTimer.StartTime()) <= 3*time.Second {
@@ -105,24 +107,24 @@ func RunElevator(
 				bufferTimer.Stop()
 				bufferTimer = nil
 			}
-			ChooseDirectionAndState(MyElev, MyOrders)
-			if IsMaster(MyElev.ElevatorID, peers.Peers) == true {
+			elevio.ChooseDirectionAndState(MyElevPtr, MyOrders)
+			if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
 				RxElevInfoChan <- MyElev
 			} else {
 				TxElevInfoChan <- MyElev
 			}
-			if MyElev.State == DoorOpen {
+			if MyElev.State == localTypes.Door_open {
 				NewFloorChan <- MyElev.Floor
 			}
 
-		case NewForeignInfo <- RxP2PElevInfoChan:
+		case NewForeignInfo := <-RxP2PElevInfoChan:
 			ForeignElevs = NewForeignInfo
-			AddLocalToForeignInfo(MyElev, ForeignElevs)
-			go SendWithDelay(ForeignElevs, TxP2PElevInfoChan)
+			elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
+			go elevio.SendWithDelay(ForeignElevs, TxP2PElevInfoChan)
 
 		default:
 			if time.Since(timeOutTimer) >= 3*time.Second {
-				if IsMaster(MyElev.ElevatorID, peers.Peers) == true {
+				if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
 					RxElevInfoChan <- MyElev
 				} else {
 					TxElevInfoChan <- MyElev

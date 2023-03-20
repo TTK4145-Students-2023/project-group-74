@@ -1,31 +1,37 @@
 package main
 
 import (
-	"elevio"
-	"flag"
+	"project-group-74/localTypes"
+	"project-group-74/network"
+	"project-group-74/decision"
+	"project-group-74/elev_control"
+	"project-group-74/elev_control/elevio"
+
+
+
 )
 
 func main() {
 
-	TxElevInfoChan := make(chan LOCAL_ELEVATOR_INFO)
-	RxElevInfoChan := make(chan LOCAL_ELEVATOR_INFO)
+	TxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO)
+	RxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO)
 
-	TxNewHallRequestChan := make(chan BUTTON_INFO)
-	RxNewHallRequestChan := make(chan BUTTON_INFO)
+	TxNewHallRequestChan := make(chan localTypes.BUTTON_INFO)
+	RxNewHallRequestChan := make(chan localTypes.BUTTON_INFO)
 
-	TxFinishedHallOrderChan := make(chan BUTTON_TYPE)
-	RxFinishedHallOrderChan := make(chan BUTTON_TYPE)
+	TxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO)
+	RxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO)
 
-	TxNewOrdersChan := make(chan map[string][types.NUM_FLOORS][types.NUM_BUTTONS - 1]bool)
-	RxNewOrdersChan := make(chan map[string][types.NUM_FLOORS][types.NUM_BUTTONS - 1]bool)
+	TxNewOrdersChan := make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
+	RxNewOrdersChan := make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
 
-	TxP2PElevInfoChan := make(chan P2P_ELEV_INFO)
-	RxP2PElevInfoChan := make(chan P2P_ELEV_INFO)
+	TxP2PElevInfoChan := make(chan localTypes.P2P_ELEV_INFO)
+	RxP2PElevInfoChan := make(chan localTypes.P2P_ELEV_INFO)
 
-	NewBtnPressChan := make(chan BUTTON_INFO)
+	NewBtnPressChan := make(chan localTypes.BUTTON_INFO)
 	NewFloorChan := make(chan int)
 
-	go P2Pnet(
+	go network.P2Pnet(
 		TxElevInfoChan,
 		RxElevInfoChan,
 		TxNewHallRequestChan,
@@ -37,19 +43,30 @@ func main() {
 		TxP2PElevInfoChan,
 		RxP2PElevInfoChan)
 
-	go RunElevator(
-		TxElevInfoChan, RxElevInfoChan, TxNewHallRequestChan, RxNewHallRequestChan,
-		TxFinishedHallOrderChan, RxFinishedHallOrderChan, RxNewOrdersChan,
-		TxP2PElevInfoChan, RxP2PElevInfoChan)
+	go elev_control.RunElevator(
+		TxElevInfoChan, 
+		RxElevInfoChan, 
+		TxNewHallRequestChan, 
+		RxNewHallRequestChan,
+		TxFinishedHallOrderChan, 
+		RxFinishedHallOrderChan, 
+		RxNewOrdersChan,
+		TxP2PElevInfoChan, 
+		RxP2PElevInfoChan,
+		NewFloorChan,
+		NewBtnPressChan)
 
-	go OrderAssigner(
-		RxElevInfoChan, RxNewHallRequestChan, RxFinishedHallOrderChan,
-		TxNewOrdersChan, RxNewOrdersChan)
+	go decision.OrderAssigner(
+		RxElevInfoChan, 
+		RxNewHallRequestChan, 
+		RxFinishedHallOrderChan,
+		TxNewOrdersChan, 
+		RxNewOrdersChan)
 
 
 
-	go elevio.PollButtons(ElevControlChns.NewBtnpress)
-	go elevio.PollNewFloor(ElevControlChns.NewFloor)
+	go elevio.PollButtons(NewBtnPressChan)
+	go elevio.PollFloorSensor(NewFloorChan)
 
 	select {}
 

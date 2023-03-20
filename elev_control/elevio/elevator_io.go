@@ -1,4 +1,4 @@
-package elev_control
+package elevio
 
 import (
 	"fmt"
