@@ -164,7 +164,7 @@ func splitIPAddr (ip string)byte{
 
 func CompareIPAddr (MyIP string, Peers []string)bool{
 	lowestIP := Peers[0]
-	for _, ip := range PeerList.Peers{
+	for _, ip := range Peers{
 		lastOctet := splitIPAddr(ip)
 		addrLowest := net.ParseIP(lowestIP).To4()
 		if lastOctet < addrLowest[3]{
