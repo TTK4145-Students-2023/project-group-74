@@ -147,3 +147,25 @@ func (loc_elev LOCAL_ELEVATOR_INFO) isValid() bool{
 }
 
 // ----- FUNCTIONS (GET/SET) ------ // 
+func splitIPAddr (ip string)byte{
+	addr := net.ParseIP(ip).To4()
+	return addr[3]
+}
+
+func CompareIPAddr (MyIP string, Peers []string)bool{
+	lowestIP := Peers[0]
+	for _, ip := range peers.Peers[1:]{
+		lastOctet := splitIPAddr(ip)
+		addrLowest := net.ParseIP(lowestIP).To4()
+		if lastOctet < addrLowest[3]{
+			lowestIP = ip
+		}
+	}
+	myIP := net.ParseIP(MyIP).To4()
+	lowestIP = string(net.ParseIP(lowestIP).To4())
+	return myIP[3] <= lowestIP[3]
+}
+
+func IsMaster(MyIP string, Peers []string)bool{
+  return CompareIPAddr(MyIP, Peers)
+}
