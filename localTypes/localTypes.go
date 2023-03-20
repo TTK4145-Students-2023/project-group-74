@@ -5,7 +5,7 @@ import (
   "strconv"
   "time"
   "net"
-  "project-group-74/network"
+  "project-group-74/network/subs/peers"
 )
 // ----- CONSTANTS ------ // 
 // Create an init file with the following constants
@@ -101,8 +101,6 @@ type OAInputs struct {
 }
 
 
-//ack_foregin_elev?
-
 // ----- FUNCTIONS (VALIDATION) ------ // 
 func isValidFloor(floor int) bool{
   return floor>=0 && floor <= NUM_FLOORS
@@ -147,7 +145,18 @@ func (loc_elev LOCAL_ELEVATOR_INFO) isValid() bool{
          loc_elev.State.isValid()     
 }
 
-// ----- FUNCTIONS (GET/SET) ------ // 
+//************ const for P2P ************
+
+const (
+	PeerPort  = 15647
+	StatePort = 16569
+)
+
+var MyIP string
+
+var PeerList peers.PeerUpdate
+
+// ----- FUNCTIONS (NETWORK) ------ // 
 func splitIPAddr (ip string)byte{
 	addr := net.ParseIP(ip).To4()
 	return addr[3]
@@ -155,7 +164,7 @@ func splitIPAddr (ip string)byte{
 
 func CompareIPAddr (MyIP string, Peers []string)bool{
 	lowestIP := Peers[0]
-	for _, ip := range network.PeerList[1:]{
+	for _, ip := range PeerList.Peers{
 		lastOctet := splitIPAddr(ip)
 		addrLowest := net.ParseIP(lowestIP).To4()
 		if lastOctet < addrLowest[3]{
