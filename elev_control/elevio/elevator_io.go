@@ -3,6 +3,7 @@ package elevio
 import (
 	"fmt"
 	"net"
+	"project-group-74/localTypes"
 	"sync"
 	"time"
 )
@@ -10,6 +11,7 @@ import (
 var _initialized bool = false
 var _mtx sync.Mutex
 var _conn net.Conn
+var _numFloors = localTypes.NUM_FLOORS
 
 const _pollRate = 20 * time.Millisecond
 
@@ -29,15 +31,15 @@ func Init(addr string, numFloors int) {
 	_initialized = true
 }
 
-func PollButtons(receiver chan<- ButtonEvent) {
+func PollButtons(receiver chan<- localTypes.BUTTON_INFO) {
 	prev := make([][3]bool, _numFloors)
 	for {
 		time.Sleep(_pollRate)
 		for f := 0; f < _numFloors; f++ {
-			for b := ButtonType(0); b < 3; b++ {
+			for b := localTypes.BUTTON_TYPE(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
-					receiver <- ButtonEvent{f, ButtonType(b)}
+					receiver <- localTypes.BUTTON_INFO{Floor: f, Button: localTypes.BUTTON_TYPE(b)}
 				}
 				prev[f][b] = v
 			}
@@ -82,11 +84,11 @@ func PollObstructionSwitch(receiver chan<- bool) {
 }
 
 // get/set funcs
-func SetMotorDirection(dir MotorDirection) {
+func SetMotorDirection(dir localTypes.MOTOR_DIR) {
 	write([4]byte{1, byte(dir), 0, 0})
 }
 
-func SetButtonLamp(button ButtonType, floor int, value bool) {
+func SetButtonLamp(button localTypes.BUTTON_TYPE, floor int, value bool) {
 	write([4]byte{2, byte(button), byte(floor), toByte(value)})
 }
 
@@ -102,7 +104,7 @@ func SetStopLamp(value bool) {
 	write([4]byte{5, toByte(value), 0, 0})
 }
 
-func GetButton(button ButtonType, floor int) bool {
+func GetButton(button localTypes.BUTTON_TYPE, floor int) bool {
 	a := read([4]byte{6, byte(button), byte(floor), 0})
 	return toBool(a[1])
 }

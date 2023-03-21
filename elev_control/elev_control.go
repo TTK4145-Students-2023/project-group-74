@@ -45,17 +45,11 @@ func RunElevator(
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	ForeignElevsPtr := &ForeignElevs
 	var timeOutTimer = time.Now()
-	var bufferTimer *time.Timer = nil
-	/*
-		Initmaster:
-			MHMatrixChan <- CombinedHMatrix //sends current CombinedHMatrix to itself
-			MForeignElevChan <- ForeignElevs // sends current Foreignelevs to itself
-	*/
 
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-			elevio.AddNewOrders(newOrder, &MyOrders, &CombinedHMatrix)
+			elevio.AddNewOrders(newOrder, &MyOrders, &CombinedHMatrix, MyElev)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			TxP2PElevInfoChan <- ForeignElevs
 			redecideChan <- true
@@ -63,9 +57,7 @@ func RunElevator(
 		case newFloor := <-NewFloorChan:
 			elevio.SetFloorIndicator(newFloor)
 			if elevio.IsOrderAtFloor(MyElev, MyOrders) == true {
-				PastElev := MyElev
-				go elevio.ArrivedAtOrder(MyElevPtr) //Opendoors, wait, wait for them to press cab etc
-				finishedOrder := elevio.GetFinOrder(newfloor, PastElev.Direction)
+				finishedOrder := elevio.GetFinOrder(newFloor, MyElev.Direction)
 				if finishedOrder.Button == localTypes.Button_Cab {
 					elevio.RemoveOneOrderBtn(finishedOrder, MyElevPtr)
 					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
@@ -75,8 +67,8 @@ func RunElevator(
 					} else {
 						TxFinishedHallOrderChan <- finishedOrder
 					}
-
 				}
+				elevio.ArrivedAtOrder(MyElevPtr) //Opendoors, wait, wait for them to press cab etc
 			}
 			MyElev.Floor = newFloor
 			redecideChan <- true
@@ -99,13 +91,7 @@ func RunElevator(
 
 		case <-redecideChan:
 			if MyElev.State == localTypes.Door_open {
-				bufferTimer = time.NewTimer(3 * time.Second)
 				break
-			} else if time.Since(bufferTimer.StartTime()) <= 3*time.Second {
-				break
-			} else if !bufferTimer.Stop() {
-				bufferTimer.Stop()
-				bufferTimer = nil
 			}
 			elevio.ChooseDirectionAndState(MyElevPtr, MyOrders)
 			if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {

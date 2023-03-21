@@ -19,17 +19,14 @@ type HRAInput struct {
 	States       map[string]HRAElevState        `json:"states"`
 }
 
-type orderAssignerBehavior int
+var motorDirStrings = map[localTypes.MOTOR_DIR]string{
+	localTypes.DIR_down: "down",
+	localTypes.DIR_stop: "stop",
+	localTypes.DIR_up:   "up",
+}
 
-const (
-	OABehaviorMaster orderAssignerBehavior = iota
-	OABehaviorSlave
-)
-
-type OAInputs struct {
-	localIDch         <-chan   string
-	ordersFromNetwork <-chan   HRAInput
-	ordersFromMaster  <-chan   []byte
-	ordersToSlave       chan<- []byte
-	localOrder          chan<- [localTypes.NUM_FLOORS][2]bool
+var elevStateStrings = map[localTypes.ELEVATOR_STATE]string{
+	localTypes.Idle:      "idle",
+	localTypes.Moving:    "moving",
+	localTypes.Door_open: "doorOpen",
 }

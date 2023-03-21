@@ -1,14 +1,11 @@
 package main
 
 import (
-	"project-group-74/localTypes"
-	"project-group-74/network"
 	"project-group-74/decision"
 	"project-group-74/elev_control"
 	"project-group-74/elev_control/elevio"
-
-
-
+	"project-group-74/localTypes"
+	"project-group-74/network"
 )
 
 func main() {
@@ -44,26 +41,24 @@ func main() {
 		RxP2PElevInfoChan)
 
 	go elev_control.RunElevator(
-		TxElevInfoChan, 
-		RxElevInfoChan, 
-		TxNewHallRequestChan, 
+		TxElevInfoChan,
+		RxElevInfoChan,
+		TxNewHallRequestChan,
 		RxNewHallRequestChan,
-		TxFinishedHallOrderChan, 
-		RxFinishedHallOrderChan, 
+		TxFinishedHallOrderChan,
+		RxFinishedHallOrderChan,
 		RxNewOrdersChan,
-		TxP2PElevInfoChan, 
+		TxP2PElevInfoChan,
 		RxP2PElevInfoChan,
 		NewFloorChan,
 		NewBtnPressChan)
 
 	go decision.OrderAssigner(
-		RxElevInfoChan, 
-		RxNewHallRequestChan, 
+		RxElevInfoChan,
+		RxNewHallRequestChan,
 		RxFinishedHallOrderChan,
-		TxNewOrdersChan, 
+		TxNewOrdersChan,
 		RxNewOrdersChan)
-
-
 
 	go elevio.PollButtons(NewBtnPressChan)
 	go elevio.PollFloorSensor(NewFloorChan)

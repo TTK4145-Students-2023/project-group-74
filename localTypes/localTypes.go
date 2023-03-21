@@ -1,88 +1,90 @@
 package localTypes
 
 import (
-  //project config 
-  "strconv"
-  "time"
-  "net"
-  "project-group-74/network/subs/peers"
+	//project config
+	"net"
+	"project-group-74/network/subs/peers"
+	"strconv"
+	"time"
 )
-// ----- CONSTANTS ------ // 
+
+// ----- CONSTANTS ------ //
 // Create an init file with the following constants
 // Time
-// RX_BUFFER 
+// RX_BUFFER
 
 const (
-  NUM_BUTTONS = 3
-  NUM_FLOORS  = 4
-  NUM_ORDERS  = NUM_FLOORS * NUM_BUTTONS
-  
-  OPEN_DOOR_TIME_sek            = 3
-  TRAVEL_TIME_sek               = 3
-  MAX_TIME_TO_FINISH_ORDER      = 3*(NUM_FLOORS-1)*(TRAVEL_TIME_sek*OPEN_DOOR_TIME_sek)
+	NUM_BUTTONS = 3
+	NUM_FLOORS  = 4
+	NUM_ORDERS  = NUM_FLOORS * NUM_BUTTONS
+
+	OPEN_DOOR_TIME_sek       = 3
+	TRAVEL_TIME_sek          = 3
+	MAX_TIME_TO_FINISH_ORDER = 3 * (NUM_FLOORS - 1) * (TRAVEL_TIME_sek * OPEN_DOOR_TIME_sek)
+	P2P_UPDATE_INTERVAL      = 200 //in ms
 )
 
-// ----- TYPE DEFINITIONS ------ // 
+// ----- TYPE DEFINITIONS ------ //
 
+type BUTTON_TYPE int
 
-
-type BUTTON_TYPE int 
-const(
-  Button_Cab      BUTTON_TYPE = 0
-  Button_hall_up              = 1
-  Button_hall_down            = 2
+const (
+	Button_Cab       BUTTON_TYPE = 0
+	Button_hall_up               = 1
+	Button_hall_down             = 2
 )
 
-type BUTTON_INFO struct{
-  Floor   int
-  Button  BUTTON_TYPE
+type BUTTON_INFO struct {
+	Floor  int
+	Button BUTTON_TYPE
 }
 
-type HMATRIX [NUM_FLOORS][NUM_BUTTONS-1]bool
-type ORDER map[string][NUM_FLOORS][NUM_BUTTONS-1]bool
+type HMATRIX [NUM_FLOORS][NUM_BUTTONS - 1]bool
+type ORDER map[string][NUM_FLOORS][NUM_BUTTONS - 1]bool
 type P2P_ELEV_INFO []LOCAL_ELEVATOR_INFO
 
-
-type FOREIGN_ORDER_TYPE struct{
-  Foreign_order BUTTON_INFO
-  Active        bool 
-  Local         bool
+type FOREIGN_ORDER_TYPE struct {
+	Foreign_order BUTTON_INFO
+	Active        bool
+	Local         bool
 }
 
 type ELEVATOR_STATE int
-const(
-  idle      ELEVATOR_STATE = 0
-  moving                   = 1
-  door_open                = 2
+
+const (
+	Idle      ELEVATOR_STATE = 0
+	Moving                   = 1
+	Door_open                = 2
 )
 
-type LOCAL_ELEVATOR_INFO struct{
-  Floor       int 
-  Direction   MOTOR_DIR 
-  State       ELEVATOR_STATE
-  CabCalls    [NUM_BUTTONS]bool
-  ElevID      string   
+type LOCAL_ELEVATOR_INFO struct {
+	Floor     int
+	Direction MOTOR_DIR
+	State     ELEVATOR_STATE
+	CabCalls  [NUM_FLOORS]bool
+	ElevID    string
 }
 
 type MOTOR_DIR int
-const(
-  DIR_down  MOTOR_DIR = -1
-  DIR_stop            =  0
-  DIR_up              =  1
+
+const (
+	DIR_down MOTOR_DIR = -1
+	DIR_stop           = 0
+	DIR_up             = 1
 )
 
 const ORDER_WATCHDOG_POLL_RATE = 50 * time.Millisecond
 
 type HRAElevState struct {
-	State       string                      `json:"behaviour"`
-	Floor       int                         `json:"floor"`
-	Direction   string                      `json:"direction"`
+	State       string           `json:"behaviour"`
+	Floor       int              `json:"floor"`
+	Direction   string           `json:"direction"`
 	CabRequests [NUM_FLOORS]bool `json:"cabRequests"`
 }
 
 type HRAInput struct {
-	HallRequests [NUM_FLOORS][2]bool `json:"hallRequests"`
-	States       map[string]HRAElevState        `json:"states"`
+	HallRequests [NUM_FLOORS][2]bool     `json:"hallRequests"`
+	States       map[string]HRAElevState `json:"states"`
 }
 
 type orderAssignerBehavior int
@@ -100,49 +102,49 @@ type OAInputs struct {
 	localOrder        chan<- [NUM_FLOORS][2]bool
 }
 
-
-// ----- FUNCTIONS (VALIDATION) ------ // 
-func isValidFloor(floor int) bool{
-  return floor>=0 && floor <= NUM_FLOORS
+// ----- FUNCTIONS (VALIDATION) ------ //
+func isValidFloor(floor int) bool {
+	return floor >= 0 && floor <= NUM_FLOORS
 }
 
-func isValidID(ID string) bool{
-  id, err := strconv.Atoi(ID)
-  if err != nil || id <0{
-    return false}
-  return true
+func isValidID(ID string) bool {
+	id, err := strconv.Atoi(ID)
+	if err != nil || id < 0 {
+		return false
+	}
+	return true
 }
 
-func (state ELEVATOR_STATE) isValid() bool{
-  return state == idle      ||
-         state == moving    ||
-         state == door_open 
+func (state ELEVATOR_STATE) isValid() bool {
+	return state == Idle ||
+		state == Moving ||
+		state == Door_open
 }
 
-func (button BUTTON_TYPE) isValid() bool{
-  return button == Button_Cab        ||
-         button == Button_hall_up    ||
-         button == Button_hall_down  
+func (button BUTTON_TYPE) isValid() bool {
+	return button == Button_Cab ||
+		button == Button_hall_up ||
+		button == Button_hall_down
 }
 
-func (btnInfo BUTTON_INFO) isValid() bool{
-  return btnInfo.Button.isValid() && isValidFloor(btnInfo.Floor)
+func (btnInfo BUTTON_INFO) isValid() bool {
+	return btnInfo.Button.isValid() && isValidFloor(btnInfo.Floor)
 }
 
-func (order FOREIGN_ORDER_TYPE) isValid() bool{
-  return BUTTON_INFO(order.Foreign_order).isValid() 
+func (order FOREIGN_ORDER_TYPE) isValid() bool {
+	return BUTTON_INFO(order.Foreign_order).isValid()
 }
 
-func (dir MOTOR_DIR) isValid() bool{
-  return dir == DIR_down  ||
-         dir == DIR_up    ||
-         dir == DIR_stop  
+func (dir MOTOR_DIR) isValid() bool {
+	return dir == DIR_down ||
+		dir == DIR_up ||
+		dir == DIR_stop
 }
 
-func (loc_elev LOCAL_ELEVATOR_INFO) isValid() bool{
-  return isValidFloor(loc_elev.Floor) &&
-         loc_elev.Direction.isValid() &&
-         loc_elev.State.isValid()     
+func (loc_elev LOCAL_ELEVATOR_INFO) isValid() bool {
+	return isValidFloor(loc_elev.Floor) &&
+		loc_elev.Direction.isValid() &&
+		loc_elev.State.isValid()
 }
 
 //************ const for P2P ************
@@ -156,18 +158,18 @@ var MyIP string
 
 var PeerList peers.PeerUpdate
 
-// ----- FUNCTIONS (NETWORK) ------ // 
-func splitIPAddr (ip string)byte{
+// ----- FUNCTIONS (NETWORK) ------ //
+func splitIPAddr(ip string) byte {
 	addr := net.ParseIP(ip).To4()
 	return addr[3]
 }
 
-func CompareIPAddr (MyIP string, Peers []string)bool{
+func CompareIPAddr(MyIP string, Peers []string) bool {
 	lowestIP := Peers[0]
-	for _, ip := range Peers{
+	for _, ip := range Peers {
 		lastOctet := splitIPAddr(ip)
 		addrLowest := net.ParseIP(lowestIP).To4()
-		if lastOctet < addrLowest[3]{
+		if lastOctet < addrLowest[3] {
 			lowestIP = ip
 		}
 	}
@@ -176,7 +178,6 @@ func CompareIPAddr (MyIP string, Peers []string)bool{
 	return myIP[3] <= lowestIP[3]
 }
 
-func IsMaster(MyIP string, Peers []string)bool{
-  return CompareIPAddr(MyIP, Peers)
+func IsMaster(MyIP string, Peers []string) bool {
+	return CompareIPAddr(MyIP, Peers)
 }
-
