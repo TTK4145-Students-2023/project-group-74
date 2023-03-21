@@ -7,46 +7,39 @@ import (
 	"project-group-74/network/subs/peers"
 	"project-group-74/localTypes"
 )
-
 //************ const for P2P ************
-
 const (
 	PeerPort  = 15647
 	StatePort = 16569
 )
 
-var MyIP string
-
-var PeerList peers.PeerUpdate
-
-
 // ************** main P2P func *************
 func P2Pnet(
-	TxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
-	RxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO,
-	TxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
-	RxNewHallRequestChan chan<- localTypes.BUTTON_INFO,
-	TxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
-	RxFinishedHallOrderChan chan<- localTypes.BUTTON_INFO,
-	TxNewOrdersChan <-chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
-	RxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
-	TxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
-	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO,) {
+	TxElevInfoChan 			<-chan 		localTypes.LOCAL_ELEVATOR_INFO,
+	RxElevInfoChan 			  chan<- 	localTypes.LOCAL_ELEVATOR_INFO,
+	TxNewHallRequestChan 	<-chan 		localTypes.BUTTON_INFO,
+	RxNewHallRequestChan 	  chan<- 	localTypes.BUTTON_INFO,
+	TxFinishedHallOrderChan <-chan 		localTypes.BUTTON_INFO,
+	RxFinishedHallOrderChan   chan<- 	localTypes.BUTTON_INFO,
+	TxNewOrdersChan 		<-chan 		map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	RxNewOrdersChan 		  chan<- 	map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	TxP2PElevInfoChan	    <-chan 		localTypes.P2P_ELEV_INFO,
+	RxP2PElevInfoChan 		  chan<- 	localTypes.P2P_ELEV_INFO,) {
 
 
-	if MyIP == "" {
+	if localTypes.MyIP == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
 			fmt.Println(err)
 			localIP = "No IP available"
 		}
-		MyIP = localIP
+		localTypes.MyIP = localIP
 	}
 
 	peerUpdateCh := make(chan peers.PeerUpdate) //We make a channel for receiving updates on the id's of the peers that are alive on the network
 	peerTxEnable := make(chan bool)             //Channel to enable
 
-	go peers.Transmitter(PeerPort, MyIP, peerTxEnable)
+	go peers.Transmitter(PeerPort, localTypes.MyIP, peerTxEnable)
 	go peers.Receiver(PeerPort, peerUpdateCh)
 
 	BCLocalStateTx := make(chan localTypes.LOCAL_ELEVATOR_INFO)
