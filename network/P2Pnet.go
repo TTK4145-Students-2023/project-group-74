@@ -112,7 +112,7 @@ func P2Pnet(
 }
 
 func printPeerUpdate(p peers.PeerUpdate){
-	fmt.Printf("Peer update:+n")
+	fmt.Printf("Peer update:\n")
 	fmt.Printf(" Peers:  %q\n", p.Peers)
 	fmt.Printf(" New: %q\n", p.New)
 	fmt.Printf(" Lost: %q\n", p.Lost)

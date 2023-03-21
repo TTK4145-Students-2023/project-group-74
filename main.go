@@ -28,6 +28,8 @@ func main() {
 	NewBtnPressChan := make(chan localTypes.BUTTON_INFO)
 	NewFloorChan := make(chan int)
 
+	elevio.Init("localhost:15657", localTypes.NUM_FLOORS)
+
 	go network.P2Pnet(
 		TxElevInfoChan,
 		RxElevInfoChan,

@@ -1,9 +1,9 @@
 package elev_control
 
 import (
+	"fmt"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
-	"project-group-74/network"
 	"time"
 )
 
@@ -35,7 +35,7 @@ func RunElevator(
 			Floor:     elevio.GetFloor(),
 			Direction: localTypes.DIR_stop,
 			CabCalls:  [localTypes.NUM_FLOORS]bool{},
-			ElevID:    network.MyIP,
+			ElevID:    localTypes.MyIP,
 		}
 
 	MyElevPtr := &MyElev
@@ -44,8 +44,9 @@ func RunElevator(
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	ForeignElevsPtr := &ForeignElevs
-	var timeOutTimer = time.Now()
-
+	//var timeOutTimer = time.Now()
+	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
+	fmt.Printf("  running elev:    %q\n", MyElev)
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
@@ -62,7 +63,7 @@ func RunElevator(
 					elevio.RemoveOneOrderBtn(finishedOrder, MyElevPtr)
 					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				} else {
-					if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
 						RxFinishedHallOrderChan <- finishedOrder
 					} else {
 						TxFinishedHallOrderChan <- finishedOrder
@@ -74,13 +75,14 @@ func RunElevator(
 			redecideChan <- true
 
 		case newBtnPress := <-NewBtnPressChan:
+			fmt.Printf("  Newbtnpress    %q\n", newBtnPress)
 			if newBtnPress.Button == localTypes.Button_Cab {
 				elevio.AddOneNewOrderBtn(newBtnPress, MyElevPtr)
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				redecideChan <- true
 			} else {
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
 						RxNewHallRequestChan <- newBtnPress
 					} else {
 						TxNewHallRequestChan <- newBtnPress
@@ -94,7 +96,7 @@ func RunElevator(
 				break
 			}
 			elevio.ChooseDirectionAndState(MyElevPtr, MyOrders)
-			if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
+			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
 				RxElevInfoChan <- MyElev
 			} else {
 				TxElevInfoChan <- MyElev
@@ -106,18 +108,23 @@ func RunElevator(
 		case NewForeignInfo := <-RxP2PElevInfoChan:
 			ForeignElevs = NewForeignInfo
 			elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
-			go elevio.SendWithDelay(ForeignElevs, TxP2PElevInfoChan)
 
-		default:
+		case <-p2pTicker.C:
+			elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
+			fmt.Printf("  sending foreignelevs:    %q\n", ForeignElevs)
+			TxP2PElevInfoChan <- ForeignElevs
+
+			/*default:
+			fmt.Printf("  defaul in elev_control   \n")
 			if time.Since(timeOutTimer) >= 3*time.Second {
-				if localTypes.IsMaster(MyElev.ElevID, network.PeerList.Peers) == true {
+				if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
 					RxElevInfoChan <- MyElev
 				} else {
 					TxElevInfoChan <- MyElev
 				}
 				TxP2PElevInfoChan <- ForeignElevs
 				timeOutTimer = time.Now()
-			}
+			}*/
 		}
 	}
 

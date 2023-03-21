@@ -50,7 +50,8 @@ func orderWatchdog(
 func CombineHRAInput(
 	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
 	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
-	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO) HRAInput {
+	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
+	TxHRAInputChan chan<- HRAInput) {
 
 	currentHRAInput := newAllFalseHRAInput()
 
@@ -62,7 +63,7 @@ func CombineHRAInput(
 			//}
 			newHRAelev := localState2HRASTATE(newElevInfo)
 			currentHRAInput.States[newElevInfo.ElevID] = newHRAelev
-			return currentHRAInput
+			TxHRAInputChan <- currentHRAInput
 
 		case newHRequest := <-RxNewHallRequestChan:
 			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
@@ -70,7 +71,7 @@ func CombineHRAInput(
 			//}
 			if !currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] {
 				currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] = true
-				return currentHRAInput
+				TxHRAInputChan <- currentHRAInput
 			}
 
 		case finishedHOrder := <-RxFinishedHallOrderChan:
@@ -78,7 +79,7 @@ func CombineHRAInput(
 			//	panic("Corrupt elevator data from RxFinishedHallOrderChan")
 			//}
 			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = false
-			return currentHRAInput
+			TxHRAInputChan <- currentHRAInput
 
 		default:
 

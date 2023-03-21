@@ -43,7 +43,11 @@ func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.H
 
 func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) bool {
 	btntype := dir2Btntype(MyElev.Direction)
-	if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype] {
+	if btntype == localTypes.Button_Cab {
+		if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype] || MyOrders[GetFloor()][btntype+1] {
+			return true
+		}
+	} else if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype-1] {
 		return true
 	}
 	return false
@@ -137,7 +141,7 @@ func dir2Btntype(dir localTypes.MOTOR_DIR) localTypes.BUTTON_TYPE {
 	} else if dir == localTypes.DIR_down {
 		return localTypes.Button_hall_down
 	} else if dir == localTypes.DIR_stop {
-		panic("Invalid direction")
+		return localTypes.Button_Cab
 	}
 	panic("No mototdir found???")
 }
