@@ -2,6 +2,7 @@ package localTypes
 
 import (
 	//project config
+	"fmt"
 	"net"
 	"project-group-74/network/subs/peers"
 	"strconv"
@@ -21,7 +22,7 @@ const (
 	OPEN_DOOR_TIME_sek       = 3
 	TRAVEL_TIME_sek          = 3
 	MAX_TIME_TO_FINISH_ORDER = 3 * (NUM_FLOORS - 1) * (TRAVEL_TIME_sek * OPEN_DOOR_TIME_sek)
-	P2P_UPDATE_INTERVAL      = 200 //in ms
+	P2P_UPDATE_INTERVAL      = 2000 //in ms
 )
 
 // ----- TYPE DEFINITIONS ------ //
@@ -29,9 +30,9 @@ const (
 type BUTTON_TYPE int
 
 const (
-	Button_Cab       BUTTON_TYPE = 0
-	Button_hall_up               = 1
-	Button_hall_down             = 2
+	Button_Cab       BUTTON_TYPE = 2
+	Button_hall_up               = 0
+	Button_hall_down             = 1
 )
 
 type BUTTON_INFO struct {
@@ -150,8 +151,8 @@ func (loc_elev LOCAL_ELEVATOR_INFO) isValid() bool {
 //************ const for P2P ************
 
 const (
-	PeerPort  = 15647
-	StatePort = 16569
+	PeerPort  = 15699
+	StatePort = 16599
 )
 
 var MyIP string
@@ -165,6 +166,9 @@ func splitIPAddr(ip string) byte {
 }
 
 func CompareIPAddr(MyIP string, Peers []string) bool {
+	if len(Peers) == 0 {
+		Peers = append(Peers, MyIP)
+	}
 	lowestIP := Peers[0]
 	for _, ip := range Peers {
 		lastOctet := splitIPAddr(ip)
@@ -173,6 +177,7 @@ func CompareIPAddr(MyIP string, Peers []string) bool {
 			lowestIP = ip
 		}
 	}
+	fmt.Printf("  Peers entry:    %q\n", Peers)
 	myIP := net.ParseIP(MyIP).To4()
 	lowestIP = string(net.ParseIP(lowestIP).To4())
 	return myIP[3] <= lowestIP[3]

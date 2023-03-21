@@ -9,8 +9,8 @@ import (
 )
 //************ const for P2P ************
 const (
-	PeerPort  = 15647
-	StatePort = 16569
+	PeerPort  = 15699
+	StatePort = 16599
 )
 
 // ************** main P2P func *************
