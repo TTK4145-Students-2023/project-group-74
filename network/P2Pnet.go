@@ -77,6 +77,7 @@ func P2Pnet(
 	// Print Peer Updates
 		case p := <-peerUpdateCh:
 			printPeerUpdate(p)
+			localTypes.PeerList.Peers = p.Peers
 	
 	// Broadcasting on network
 		case BroadcastLocalState := <-TxElevInfoChan:
