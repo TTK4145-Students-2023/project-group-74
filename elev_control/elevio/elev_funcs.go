@@ -1,11 +1,30 @@
 package elevio
 
 import (
+	"fmt"
 	"project-group-74/localTypes"
 	"time"
 )
 
 // used as goroutine
+func Redecide(redecideChan <-chan bool, TxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO, RxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO, newFloorChan chan<- int, MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX, MyElevPtr *localTypes.LOCAL_ELEVATOR_INFO) {
+	for {
+		<-redecideChan
+		fmt.Printf("  redeciding")
+		if MyElev.State == localTypes.Door_open {
+			break
+		}
+		ChooseDirectionAndState(MyElevPtr, MyOrders)
+		if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+			RxElevInfoChan <- MyElev
+		} else {
+			TxElevInfoChan <- MyElev
+		}
+		if MyElev.State == localTypes.Door_open {
+			newFloorChan <- MyElev.Floor
+		}
+	}
+}
 
 func ArrivedAtOrder(
 	MyElev *localTypes.LOCAL_ELEVATOR_INFO) {
@@ -43,11 +62,12 @@ func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.H
 
 func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) bool {
 	btntype := dir2Btntype(MyElev.Direction)
+
 	if btntype == localTypes.Button_Cab {
-		if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype] || MyOrders[GetFloor()][btntype+1] {
+		if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][localTypes.Button_hall_down] || MyOrders[GetFloor()][localTypes.Button_hall_up] {
 			return true
 		}
-	} else if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype-1] {
+	} else if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype] {
 		return true
 	}
 	return false
@@ -184,7 +204,7 @@ func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATR
 	var result [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool
 	for i := 0; i < localTypes.NUM_FLOORS; i++ {
 		result[i][0] = MyCabs[i]
-		for j := 0; j < localTypes.NUM_BUTTONS; j++ {
+		for j := 1; j < localTypes.NUM_BUTTONS; j++ {
 			result[i][j] = MyOrders[i][j-1]
 		}
 	}

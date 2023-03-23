@@ -26,6 +26,8 @@ func OrderAssigner(
 	default:
 		panic("OS not supported")
 	}
+	fmt.Printf(" ORDERASSIGNER RUNNING ")
+
 
 	go DLOCC.CombineHRAInput(
 		RxElevInfoChan,
@@ -35,6 +37,8 @@ func OrderAssigner(
 
 	for {
 		newHRAInput := <-TxHRAInputChan
+		fmt.Printf(" ORDERASSIGNER RUNNING ")
+
 		fmt.Printf("")
 		if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 			newOrders := DLOCC.ReassignOrders(newHRAInput, hraExecutable)

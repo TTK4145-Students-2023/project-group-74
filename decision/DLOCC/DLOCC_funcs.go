@@ -54,6 +54,7 @@ func CombineHRAInput(
 	TxHRAInputChan chan<- HRAInput) {
 
 	currentHRAInput := newAllFalseHRAInput()
+	fmt.Printf(" COMBINEHRAINPUT RUNNING ")
 
 	for {
 		select {
@@ -104,7 +105,7 @@ func ReassignOrders(newHRAInput HRAInput, hraExecutable string) map[string][loca
 		fmt.Println("json.Marshal error: ", err)
 	}
 
-	ret, err := exec.Command("project-group-74/decision/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+	ret, err := exec.Command("decision/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
 	if err != nil {
 		fmt.Println("exec.Command error: ", err)
 		fmt.Println(string(ret))

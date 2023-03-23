@@ -32,31 +32,44 @@ func Init(addr string, numFloors int) {
 }
 
 func PollButtons(receiver chan<- localTypes.BUTTON_INFO) {
+	fmt.Printf(" POLLBUTTONS RUNNING ")
+
 	prev := make([][3]bool, _numFloors)
 	for {
 		time.Sleep(_pollRate)
+
 		for f := 0; f < _numFloors; f++ {
 			for b := localTypes.BUTTON_TYPE(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
 					receiver <- localTypes.BUTTON_INFO{Floor: f, Button: localTypes.BUTTON_TYPE(b)}
+					fmt.Println("newbtnpress floor %q", f)
+					fmt.Println("newbtnpress btn %q", b)
+
 				}
 				prev[f][b] = v
 			}
+
 		}
 	}
 }
 
 func PollFloorSensor(receiver chan<- int) {
+	fmt.Printf(" POLLFLOOR RUNNING ")
+
 	prev := -1
 	for {
 		time.Sleep(_pollRate)
 		v := GetFloor()
 		if v != prev && v != -1 {
 			receiver <- v
+			fmt.Println("newfloor %q", v)
+
 		}
 		prev = v
+
 	}
+
 }
 
 func PollStopButton(receiver chan<- bool) {
