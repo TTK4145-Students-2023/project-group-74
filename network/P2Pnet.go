@@ -76,6 +76,8 @@ func P2Pnet(
 	recieveTimer := time.NewTimer(1)
 	recieveTimer.Stop()
 
+	fmt.Printf("RecieveTimer: %v\n", recieveTimer)
+
 	for {
 		select {
 		// Print Peer Updates
@@ -102,6 +104,7 @@ func P2Pnet(
 				BCFinHallOrderTx <- bc2
 			}
 			bc3, ok4 := <-TxNewOrdersChan
+			fmt.Printf("P2Pnet: ok4: %v\n", ok4)
 			if ok4 {
 				fmt.Printf("NET.BC: new order\n")
 				BCNewOrderTx <- bc3
@@ -135,34 +138,33 @@ func P2Pnet(
 			// }
 
 			// Reading from network
-		case <-recieveTimer.C:
-			r, ok6 := <-RecieveLocalStateRx
+		case r, ok6 := <-RecieveLocalStateRx:
 			if ok6 {
 				fmt.Printf("NET Recived elevinfo\n")
 				RxElevInfoChan <- r
 
 			}
-			r1, ok7 := <-RecieveNewHallReqRx
+		case r1, ok7 := <-RecieveNewHallReqRx:
 			if ok7 {
 				fmt.Printf("NET Recived new hall req\n")
 				RxNewHallRequestChan <- r1
 			}
-			r2, ok8 := <-RecieveFinHallOrderRx
+		case r2, ok8 := <-RecieveFinHallOrderRx:
 			if ok8 {
 				fmt.Printf("NET Recived finished hall order\n")
 				RxFinishedHallOrderChan <- r2
 			}
-			r3, ok9 := <-RecieveOrderRx
+		case r3, ok9 := <-RecieveOrderRx:
 			if ok9 {
 				fmt.Printf("NET Recived new orders\n")
 				RxNewOrdersChan <- r3
 			}
-			r4, ok10 := <-RecieveP2PElevInfo
+		case r4, ok10 := <-RecieveP2PElevInfo:
 			if ok10 {
 				fmt.Printf("NET Recived P2Pelevinfo\n")
 				RxP2PElevInfoChan <- r4
 			}
-			recieveTimer.Reset(1)
+		recieveTimer.Reset(1)
 
 			// case ReceiveForeignElevatorState := <-RecieveLocalStateRx:
 			// 	// if !ReceiveForeignElevatorState.IsValid(){

@@ -64,14 +64,17 @@ func CombineHRAInput(
 			//}
 			newHRAelev := localState2HRASTATE(newElevInfo)
 			currentHRAInput.States[newElevInfo.ElevID] = newHRAelev
-			TxHRAInputChan <- currentHRAInput
+			fmt.Printf("DLOCC: HRAelev: %v\n", currentHRAInput)
+			//TxHRAInputChan <- currentHRAInput
 
-		case newHRequest := <-RxNewHallRequestChan:
+		case newHRequest:= <-RxNewHallRequestChan:
 			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
 			//	panic("Corrupt elevator data from RxNewHallRequestChan")
 			//}
 			if !currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] {
+				fmt.Printf("DLOCC: HRAinput: %v\n", currentHRAInput)
 				currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] = true
+				fmt.Printf("DLOCC: HRAinput: %v\n", currentHRAInput)
 				TxHRAInputChan <- currentHRAInput
 			}
 
@@ -79,6 +82,7 @@ func CombineHRAInput(
 			//if !isValidFloor(finishedHOrder.Floor) || finishedHOrder.Button !isValid(){
 			//	panic("Corrupt elevator data from RxFinishedHallOrderChan")
 			//}
+			fmt.Printf("DLOCC: finishedHOrder: %v\n", currentHRAInput)
 			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = false
 			TxHRAInputChan <- currentHRAInput
 

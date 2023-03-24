@@ -7,6 +7,7 @@ import (
 	"runtime"
 )
 
+
 func OrderAssigner(
 	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
 	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
@@ -36,15 +37,23 @@ func OrderAssigner(
 		TxHRAInputChan)
 
 	for {
-		newHRAInput := <-TxHRAInputChan
-		fmt.Printf(" ORDERASSIGNER RUNNING ")
+		newHRAInput, ok := <-TxHRAInputChan
+		fmt.Printf("orderAssigner: newHRAInput: ok: %v\n", ok)
+		fmt.Printf(" ORDERASSIGNER RUNNING (inside for loop)\n")
 
 		fmt.Printf("")
 		if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 			newOrders := DLOCC.ReassignOrders(newHRAInput, hraExecutable)
-
-			TxNewOrdersChan <- newOrders
-			RxNewOrdersChan <- newOrders
+			for k,v := range newOrders{
+				fmt.Printf("New Orders: %s: %v\n", k, v)
+				if value, ok := newOrders[k]; ok{
+					fmt.Printf("orderAssigner: newOrders: ok: %v\n", ok)
+					TxNewOrdersChan <- newOrders
+					fmt.Printf("This value was passed on TxNewOrdersChan: %v\n", value)
+				}
+			}
+			//TxNewOrdersChan <- newOrders
+			//RxNewOrdersChan <- newOrders
 		}
 	}
 }

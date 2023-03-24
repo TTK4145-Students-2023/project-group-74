@@ -10,7 +10,7 @@ import (
 func Redecide(redecideChan <-chan bool, TxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO, RxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO, newFloorChan chan<- int, MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX, MyElevPtr *localTypes.LOCAL_ELEVATOR_INFO) {
 	for {
 		<-redecideChan
-		fmt.Printf("  redeciding")
+		fmt.Printf("  redeciding\n")
 		if MyElev.State == localTypes.Door_open {
 			break
 		}

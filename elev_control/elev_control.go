@@ -72,6 +72,7 @@ func RunElevator(
 					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				} else {
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+						fmt.Printf("RunElevator: New Floor: finished hall order\n")
 						RxFinishedHallOrderChan <- finishedOrder
 					} else {
 						TxFinishedHallOrderChan <- finishedOrder
@@ -91,8 +92,10 @@ func RunElevator(
 			} else {
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+						fmt.Printf("Run Elevator: newBtnPress: new hall request!\n")
 						RxNewHallRequestChan <- newBtnPress
 					} else {
+						fmt.Printf("Run Elevator: newBtnPress: Broadcast new hall request!\n")
 						TxNewHallRequestChan <- newBtnPress
 					}
 
