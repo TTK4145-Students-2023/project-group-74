@@ -73,6 +73,8 @@ func P2Pnet(
 
 	// Broadcast Timer
 	broadcastTimer := time.NewTimer(BroadcastRate)
+	recieveTimer := time.NewTimer(1)
+	recieveTimer.Stop()
 
 	for {
 		select {
@@ -80,27 +82,33 @@ func P2Pnet(
 		case p := <-peerUpdateCh:
 			printPeerUpdate(p)
 			localTypes.PeerList.Peers = p.Peers
+			fmt.Printf("This is PeerList: %q\n", localTypes.PeerList.Peers)
 
 			// Broadcasting on network
 		case <-broadcastTimer.C:
 			bc, ok := <-TxElevInfoChan
-			if ok{
+			if ok {
+				fmt.Printf("NET.BC: Local State\n")
 				BCLocalStateTx <- bc
 			}
-			bc1, ok := <-TxNewHallRequestChan
-			if ok{
+			bc1, ok2 := <-TxNewHallRequestChan
+			if ok2 {
+				fmt.Printf("NET.BC: New Hall req\n")
 				BCNewHallReqTx <- bc1
 			}
-			bc2, ok := <-TxFinishedHallOrderChan
-			if ok{
+			bc2, ok3 := <-TxFinishedHallOrderChan
+			if ok3 {
+				fmt.Printf("NET.BC: Finished hall order\n")
 				BCFinHallOrderTx <- bc2
 			}
-			bc3, ok := <-TxNewOrdersChan
-			if ok{
+			bc3, ok4 := <-TxNewOrdersChan
+			if ok4 {
+				fmt.Printf("NET.BC: new order\n")
 				BCNewOrderTx <- bc3
 			}
-			bc4, ok := <-TxP2PElevInfoChan
-			if ok{
+			bc4, ok5 := <-TxP2PElevInfoChan
+			if ok5 {
+				fmt.Printf("NET.BC: Elev Info\n")
 				BCP2PElevInfo <- bc4
 			}
 			broadcastTimer.Reset(BroadcastRate)
@@ -127,19 +135,48 @@ func P2Pnet(
 			// }
 
 			// Reading from network
-		// case ReceiveForeignElevatorState := <-RecieveLocalStateRx:
-		// 	// if !ReceiveForeignElevatorState.IsValid(){
-		// 	// 	panic("NET: Received data not valid + ??ID??")
-		// 	// }
-		// 	RxElevInfoChan <- ReceiveForeignElevatorState
-		// case RecieveNewHallReq := <-RecieveNewHallReqRx:
-		// 	RxNewHallRequestChan <- RecieveNewHallReq
-		// case RecieveFinishedHallOrder := <-RecieveFinHallOrderRx:
-		// 	RxFinishedHallOrderChan <- RecieveFinishedHallOrder
-		// case RecieveNewOrders := <-RecieveOrderRx:
-		// 	RxNewOrdersChan <- RecieveNewOrders
-		// case RecieveP2PElev := <-RecieveP2PElevInfo:
-		// 	RxP2PElevInfoChan <- RecieveP2PElev
+		case <-recieveTimer.C:
+			r, ok6 := <-RecieveLocalStateRx
+			if ok6 {
+				fmt.Printf("NET Recived elevinfo\n")
+				RxElevInfoChan <- r
+
+			}
+			r1, ok7 := <-RecieveNewHallReqRx
+			if ok7 {
+				fmt.Printf("NET Recived new hall req\n")
+				RxNewHallRequestChan <- r1
+			}
+			r2, ok8 := <-RecieveFinHallOrderRx
+			if ok8 {
+				fmt.Printf("NET Recived finished hall order\n")
+				RxFinishedHallOrderChan <- r2
+			}
+			r3, ok9 := <-RecieveOrderRx
+			if ok9 {
+				fmt.Printf("NET Recived new orders\n")
+				RxNewOrdersChan <- r3
+			}
+			r4, ok10 := <-RecieveP2PElevInfo
+			if ok10 {
+				fmt.Printf("NET Recived P2Pelevinfo\n")
+				RxP2PElevInfoChan <- r4
+			}
+			recieveTimer.Reset(1)
+
+			// case ReceiveForeignElevatorState := <-RecieveLocalStateRx:
+			// 	// if !ReceiveForeignElevatorState.IsValid(){
+			// 	// 	panic("NET: Received data not valid + ??ID??")
+			// 	// }
+			// 	RxElevInfoChan <- ReceiveForeignElevatorState
+			// case RecieveNewHallReq := <-RecieveNewHallReqRx:
+			// 	RxNewHallRequestChan <- RecieveNewHallReq
+			// case RecieveFinishedHallOrder := <-RecieveFinHallOrderRx:
+			// 	RxFinishedHallOrderChan <- RecieveFinishedHallOrder
+			// case RecieveNewOrders := <-RecieveOrderRx:
+			// 	RxNewOrdersChan <- RecieveNewOrders
+			// case RecieveP2PElev := <-RecieveP2PElevInfo:
+			// 	RxP2PElevInfoChan <- RecieveP2PElev
 		}
 	}
 }

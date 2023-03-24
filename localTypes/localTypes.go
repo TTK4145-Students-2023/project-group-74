@@ -2,7 +2,6 @@ package localTypes
 
 import (
 	//project config
-	"fmt"
 	"net"
 	"project-group-74/network/subs/peers"
 	"strconv"
@@ -177,7 +176,6 @@ func CompareIPAddr(MyIP string, Peers []string) bool {
 			lowestIP = ip
 		}
 	}
-	fmt.Printf("  Peers entry:    %q\n", Peers)
 	myIP := net.ParseIP(MyIP).To4()
 	lowestIP = string(net.ParseIP(lowestIP).To4())
 	return myIP[3] <= lowestIP[3]
