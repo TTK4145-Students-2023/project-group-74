@@ -2,6 +2,7 @@ package main
 
 import (
 	"project-group-74/decision"
+	"project-group-74/decision/DLOCC"
 	"project-group-74/elev_control"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
@@ -27,6 +28,9 @@ func main() {
 
 	NewBtnPressChan := make(chan localTypes.BUTTON_INFO)
 	NewFloorChan := make(chan int)
+
+	TxHRAInputChan := make(chan localTypes.HRAInput)
+
 
 	elevio.Init("localhost:15657", localTypes.NUM_FLOORS)
 
@@ -60,7 +64,14 @@ func main() {
 		RxNewHallRequestChan,
 		RxFinishedHallOrderChan,
 		TxNewOrdersChan,
-		RxNewOrdersChan)
+		RxNewOrdersChan,
+		TxHRAInputChan)
+
+	go DLOCC.CombineHRAInput(
+		RxElevInfoChan,
+		RxNewHallRequestChan,
+		RxFinishedHallOrderChan,
+		TxHRAInputChan)
 
 	go elevio.PollButtons(NewBtnPressChan)
 	go elevio.PollFloorSensor(NewFloorChan)

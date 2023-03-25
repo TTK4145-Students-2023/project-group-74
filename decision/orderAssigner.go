@@ -7,16 +7,14 @@ import (
 	"runtime"
 )
 
-
 func OrderAssigner(
 	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
 	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
 	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
 	TxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
 	RxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	TxHRAInputChan <-chan localTypes.HRAInput,
 ) {
-
-	TxHRAInputChan := make(chan DLOCC.HRAInput)
 
 	hraExecutable := ""
 	switch runtime.GOOS {
@@ -27,33 +25,23 @@ func OrderAssigner(
 	default:
 		panic("OS not supported")
 	}
-	fmt.Printf(" ORDERASSIGNER RUNNING ")
-
-
-	go DLOCC.CombineHRAInput(
-		RxElevInfoChan,
-		RxNewHallRequestChan,
-		RxFinishedHallOrderChan,
-		TxHRAInputChan)
 
 	for {
 		newHRAInput, ok := <-TxHRAInputChan
 		fmt.Printf("orderAssigner: newHRAInput: ok: %v\n", ok)
-		fmt.Printf(" ORDERASSIGNER RUNNING (inside for loop)\n")
 
 		fmt.Printf("")
 		if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 			newOrders := DLOCC.ReassignOrders(newHRAInput, hraExecutable)
-			for k,v := range newOrders{
+			for k, v := range newOrders {
 				fmt.Printf("New Orders: %s: %v\n", k, v)
-				if value, ok := newOrders[k]; ok{
-					fmt.Printf("orderAssigner: newOrders: ok: %v\n", ok)
-					TxNewOrdersChan <- newOrders
+				if value, ok := newOrders[k]; ok {
 					fmt.Printf("This value was passed on TxNewOrdersChan: %v\n", value)
 				}
 			}
-			//TxNewOrdersChan <- newOrders
 			//RxNewOrdersChan <- newOrders
+			TxNewOrdersChan <- newOrders
+
 		}
 	}
 }

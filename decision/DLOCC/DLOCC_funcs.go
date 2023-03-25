@@ -51,10 +51,9 @@ func CombineHRAInput(
 	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
 	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
 	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
-	TxHRAInputChan chan<- HRAInput) {
+	TxHRAInputChan chan<- localTypes.HRAInput) {
 
 	currentHRAInput := newAllFalseHRAInput()
-	fmt.Printf(" COMBINEHRAINPUT RUNNING ")
 
 	for {
 		select {
@@ -65,45 +64,51 @@ func CombineHRAInput(
 			newHRAelev := localState2HRASTATE(newElevInfo)
 			currentHRAInput.States[newElevInfo.ElevID] = newHRAelev
 			fmt.Printf("DLOCC: HRAelev: %v\n", currentHRAInput)
-			//TxHRAInputChan <- currentHRAInput
+			TxHRAInputChan <- currentHRAInput
+			fmt.Printf("DLOCC: NEWHRAinput sent\n")
 
-		case newHRequest:= <-RxNewHallRequestChan:
+		case newHRequest := <-RxNewHallRequestChan:
 			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
 			//	panic("Corrupt elevator data from RxNewHallRequestChan")
 			//}
 			if !currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] {
-				fmt.Printf("DLOCC: HRAinput: %v\n", currentHRAInput)
+				fmt.Printf("DLOCC: LASTHRAinput: %v\n", currentHRAInput)
 				currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] = true
-				fmt.Printf("DLOCC: HRAinput: %v\n", currentHRAInput)
+				fmt.Printf("DLOCC: NEWHRAinput: %v\n", currentHRAInput)
 				TxHRAInputChan <- currentHRAInput
+				fmt.Printf("DLOCC: NEWHRAinput sent\n")
+
 			}
 
 		case finishedHOrder := <-RxFinishedHallOrderChan:
 			//if !isValidFloor(finishedHOrder.Floor) || finishedHOrder.Button !isValid(){
 			//	panic("Corrupt elevator data from RxFinishedHallOrderChan")
 			//}
-			fmt.Printf("DLOCC: finishedHOrder: %v\n", currentHRAInput)
+			fmt.Printf("DLOCC: finishedHOrder: %v\n \n", currentHRAInput)
 			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = false
 			TxHRAInputChan <- currentHRAInput
+			fmt.Printf("DLOCC: NEWHRAinput sent \n")
 
 		default:
+			time.Sleep((time.Millisecond * localTypes.ORDER_MIN_UPDATE_INTERVAL))
 
 		}
+
 	}
 }
 
-func newAllFalseHRAInput() HRAInput {
-	output := HRAInput{}
+func newAllFalseHRAInput() localTypes.HRAInput {
+	output := localTypes.HRAInput{}
 	for i := range output.HallRequests {
 		for j := range output.HallRequests[i] {
 			output.HallRequests[i][j] = false
 		}
 	}
-	output.States = make(map[string]HRAElevState)
+	output.States = make(map[string]localTypes.HRAElevState)
 	return output
 }
 
-func ReassignOrders(newHRAInput HRAInput, hraExecutable string) map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool {
+func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool {
 	jsonBytes, err := json.Marshal(newHRAInput)
 	if err != nil {
 		fmt.Println("json.Marshal error: ", err)
@@ -123,8 +128,8 @@ func ReassignOrders(newHRAInput HRAInput, hraExecutable string) map[string][loca
 	return output
 }
 
-func localState2HRASTATE(newElevInfo localTypes.LOCAL_ELEVATOR_INFO) HRAElevState {
-	output := HRAElevState{
+func localState2HRASTATE(newElevInfo localTypes.LOCAL_ELEVATOR_INFO) localTypes.HRAElevState {
+	output := localTypes.HRAElevState{
 		State:       getElevStateString(newElevInfo.State),
 		Floor:       newElevInfo.Floor,
 		Direction:   getMotorDirString(newElevInfo.Direction),

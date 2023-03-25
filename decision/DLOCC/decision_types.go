@@ -7,17 +7,6 @@ import (
 
 const ORDER_WATCHDOG_POLL_RATE = 50 * time.Millisecond
 
-type HRAElevState struct {
-	State       string                      `json:"behaviour"`
-	Floor       int                         `json:"floor"`
-	Direction   string                      `json:"direction"`
-	CabRequests [localTypes.NUM_FLOORS]bool `json:"cabRequests"`
-}
-
-type HRAInput struct {
-	HallRequests [localTypes.NUM_FLOORS][2]bool `json:"hallRequests"`
-	States       map[string]HRAElevState        `json:"states"`
-}
 
 var motorDirStrings = map[localTypes.MOTOR_DIR]string{
 	localTypes.DIR_down: "down",
