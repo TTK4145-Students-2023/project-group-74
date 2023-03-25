@@ -14,6 +14,9 @@ func Redecide(redecideChan <-chan bool, TxElevInfoChan chan<- localTypes.LOCAL_E
 		if MyElev.State == localTypes.Door_open {
 			break
 		}
+		fmt.Printf("  MyelevPTR    %v\n", MyElevPtr)
+		fmt.Printf("  Myelev    %v\n", MyElev)
+
 		ChooseDirectionAndState(MyElevPtr, MyOrders)
 		if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
 			RxElevInfoChan <- MyElev
@@ -51,9 +54,14 @@ func SendWithDelay(foreignElevs localTypes.P2P_ELEV_INFO, TxChannel chan<- local
 // Private funcs
 func ChooseDirectionAndState(MyElev *localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) {
 	newDir, newState := findDirection(MyElev, MyOrders)
+	fmt.Printf("  currentdir:    %v\n", MyElev.Direction)
+	fmt.Printf(" newdir:    %v\n", newDir)
+
 	SetMotorDirection(newDir)
 	MyElev.Direction = newDir
 	MyElev.State = newState
+	fmt.Printf("  updatedcurrentdir:    %v\n", MyElev.Direction)
+
 }
 
 func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.HMATRIX) bool { //neccecary?
@@ -150,9 +158,10 @@ func findDirection(MyElev *localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 		} else {
 			return localTypes.DIR_stop, localTypes.Idle
 		}
-
+	default: 
+		return localTypes.DIR_stop, localTypes.Idle
 	}
-	return localTypes.DIR_stop, localTypes.Idle
+	
 }
 
 func dir2Btntype(dir localTypes.MOTOR_DIR) localTypes.BUTTON_TYPE {

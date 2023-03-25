@@ -63,9 +63,9 @@ func CombineHRAInput(
 			//}
 			newHRAelev := localState2HRASTATE(newElevInfo)
 			currentHRAInput.States[newElevInfo.ElevID] = newHRAelev
-			fmt.Printf("DLOCC: HRAelev: %v\n", currentHRAInput)
+			//fmt.Printf("DLOCC: HRAelev: %v\n", currentHRAInput)
 			TxHRAInputChan <- currentHRAInput
-			fmt.Printf("DLOCC: NEWHRAinput sent\n")
+			//fmt.Printf("DLOCC: NEWHRAinput sent\n")
 
 		case newHRequest := <-RxNewHallRequestChan:
 			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
@@ -90,7 +90,7 @@ func CombineHRAInput(
 			fmt.Printf("DLOCC: NEWHRAinput sent \n")
 
 		default:
-			time.Sleep((time.Millisecond * localTypes.ORDER_MIN_UPDATE_INTERVAL))
+			time.Sleep((time.Millisecond * 100))
 
 		}
 

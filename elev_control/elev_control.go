@@ -45,18 +45,20 @@ func RunElevator(
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	ForeignElevsPtr := &ForeignElevs
 	//var timeOutTimer = time.Now()
-//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
+	//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
 
 	go elevio.Redecide(redecideChan, TxElevInfoChan, RxElevInfoChan, NewFloorChan, MyElev, MyOrders, MyElevPtr)
 
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-			fmt.Printf("  neworder\n")
 
 			elevio.AddNewOrders(newOrder, &MyOrders, &CombinedHMatrix, MyElev)
+
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-			TxP2PElevInfoChan <- ForeignElevs
+
+			//TxP2PElevInfoChan <- ForeignElevs
+
 			redecideChan <- true
 
 		case newFloor := <-NewFloorChan:
@@ -111,12 +113,12 @@ func RunElevator(
 			fmt.Printf("  sending ForeignElev: \n")
 			TxP2PElevInfoChan <- ForeignElevs
 
-		// case timer := <-p2pTicker.C:
-		// 	fmt.Printf("  timer %v\n", timer)
+			// case timer := <-p2pTicker.C:
+			// 	fmt.Printf("  timer %v\n", timer)
 
-		// 	elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
-		// 	fmt.Printf("  sending ForeignElev: \n")
-		// 	TxP2PElevInfoChan <- ForeignElevs
+			// 	elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
+			// 	fmt.Printf("  sending ForeignElev: \n")
+			// 	TxP2PElevInfoChan <- ForeignElevs
 		}
 	}
 
