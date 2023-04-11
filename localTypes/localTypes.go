@@ -2,7 +2,7 @@ package localTypes
 
 import (
 	//project config
-	"fmt"
+
 	"net"
 	"project-group-74/network/subs/peers"
 	"strconv"
@@ -95,7 +95,6 @@ const (
 	OABehaviorSlave
 )
 
-
 // ----- FUNCTIONS (VALIDATION) ------ //
 func isValidFloor(floor int) bool {
 	return floor >= 0 && floor <= NUM_FLOORS
@@ -172,9 +171,9 @@ func CompareIPAddr(MyIP string, Peers []string) bool {
 	}
 	myIP := net.ParseIP(MyIP).To4()
 	lowestIP = string(net.ParseIP(lowestIP).To4())
-	fmt.Printf("My IP: %v\n", myIP)
+	/*fmt.Printf("My IP: %v\n", myIP)
 	v := myIP[3] <= lowestIP[3]
-	fmt.Printf("Am I master: %v\n", v)
+	fmt.Printf("Am I master: %v\n", v)*/
 	return myIP[3] <= lowestIP[3]
 }
 

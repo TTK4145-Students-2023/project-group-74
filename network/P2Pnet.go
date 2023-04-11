@@ -45,7 +45,7 @@ func P2Pnet(
 	go peers.Transmitter(PeerPort, localTypes.MyIP, peerTxEnable)
 	go peers.Receiver(PeerPort, peerUpdateCh)
 
-	var (
+	/*var (
 		BCLocalStateTx        = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		RecieveLocalStateRx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		BCNewHallReqTx        = make(chan localTypes.BUTTON_INFO)
@@ -56,23 +56,23 @@ func P2Pnet(
 		RecieveOrderRx        = make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
 		BCP2PElevInfo         = make(chan localTypes.P2P_ELEV_INFO)
 		RecieveP2PElevInfo    = make(chan localTypes.P2P_ELEV_INFO)
-	)
+	)*/
 	// GoRoutines to recieve from NTW
-	go bcast.Receiver(StatePort, RecieveLocalStateRx)
-	go bcast.Receiver(StatePort, RecieveNewHallReqRx)
-	go bcast.Receiver(StatePort, RecieveFinHallOrderRx)
-	go bcast.Receiver(StatePort, RecieveOrderRx)
-	go bcast.Receiver(StatePort, RecieveP2PElevInfo)
+	go bcast.Receiver(StatePort, RxElevInfoChan)
+	go bcast.Receiver(StatePort, RxNewHallRequestChan)
+	go bcast.Receiver(StatePort, RxFinishedHallOrderChan)
+	go bcast.Receiver(StatePort, RxNewOrdersChan)
+	go bcast.Receiver(StatePort, RxP2PElevInfoChan)
 
 	// GoRoutines to broadcast over NTW
-	go bcast.Transmitter(StatePort, BCLocalStateTx)
-	go bcast.Transmitter(StatePort, BCNewHallReqTx)
-	go bcast.Transmitter(StatePort, BCFinHallOrderTx)
-	go bcast.Transmitter(StatePort, BCNewOrderTx)
-	go bcast.Transmitter(StatePort, BCP2PElevInfo)
+	go bcast.Transmitter(StatePort, TxElevInfoChan)
+	go bcast.Transmitter(StatePort, TxNewHallRequestChan)
+	go bcast.Transmitter(StatePort, TxFinishedHallOrderChan)
+	go bcast.Transmitter(StatePort, TxNewOrdersChan)
+	go bcast.Transmitter(StatePort, TxP2PElevInfoChan)
 
 	// Broadcast Timer
-	broadcastTimer := time.NewTimer(BroadcastRate)
+	//broadcastTimer := time.NewTimer(BroadcastRate)
 	recieveTimer := time.NewTimer(1)
 	recieveTimer.Stop()
 
@@ -87,7 +87,9 @@ func P2Pnet(
 			fmt.Printf("This is PeerList: %q\n", localTypes.PeerList.Peers)
 
 			// Broadcasting on network
+			/*
 		case <-broadcastTimer.C:
+			fmt.Printf("BCASTTIMER PROCCCCC\n")
 			bc, ok := <-TxElevInfoChan
 			if ok {
 				fmt.Printf("NET.BC: Local State\n")
@@ -163,9 +165,9 @@ func P2Pnet(
 			if ok10 {
 				fmt.Printf("NET Recived P2Pelevinfo\n")
 				RxP2PElevInfoChan <- r4
-			}
-		recieveTimer.Reset(1)
-
+			}*/
+		default:
+			time.Sleep((time.Millisecond * 100))
 			// case ReceiveForeignElevatorState := <-RecieveLocalStateRx:
 			// 	// if !ReceiveForeignElevatorState.IsValid(){
 			// 	// 	panic("NET: Received data not valid + ??ID??")

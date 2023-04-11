@@ -41,10 +41,10 @@ func PollButtons(receiver chan<- localTypes.BUTTON_INFO) {
 		for f := 0; f < _numFloors; f++ {
 			for b := localTypes.BUTTON_TYPE(0); b < 3; b++ {
 				v := GetButton(b, f)
-				if v != prev[f][b] && v != false {
+				if v != prev[f][b] && v {
 					receiver <- localTypes.BUTTON_INFO{Floor: f, Button: localTypes.BUTTON_TYPE(b)}
-					fmt.Println("newbtnpress floor %v", f)
-					fmt.Println("newbtnpress btn %v", b)
+					fmt.Println("newbtnpress floor %b", f)
+					fmt.Println("newbtnpress btn %b", b)
 
 				}
 				prev[f][b] = v
@@ -63,7 +63,7 @@ func PollFloorSensor(receiver chan<- int) {
 		v := GetFloor()
 		if v != prev && v != -1 {
 			receiver <- v
-			fmt.Println("newfloor %v", v)
+			fmt.Println("newfloor %b", v)
 
 		}
 		prev = v
