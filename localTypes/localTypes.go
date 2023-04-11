@@ -95,13 +95,6 @@ const (
 	OABehaviorSlave
 )
 
-type OAInputs struct {
-	localIDch         <-chan string
-	ordersFromNetwork <-chan HRAInput
-	ordersFromMaster  <-chan []byte
-	ordersToSlave     chan<- []byte
-	localOrder        chan<- [NUM_FLOORS][2]bool
-}
 
 // ----- FUNCTIONS (VALIDATION) ------ //
 func isValidFloor(floor int) bool {

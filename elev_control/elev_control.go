@@ -27,8 +27,6 @@ func RunElevator(
 	NewFloorChan chan int,
 	NewBtnPressChan <-chan localTypes.BUTTON_INFO) {
 
-	redecideChan := make(chan bool)
-
 	MyElev :=
 		localTypes.LOCAL_ELEVATOR_INFO{
 			State:     localTypes.Idle,
@@ -39,25 +37,23 @@ func RunElevator(
 		}
 
 	MyElevPtr := &MyElev
-	elevio.LocalElevInitFloor(MyElevPtr)
+	elevio.LocalElevInitFloor(&MyElev)
+	
 	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	ForeignElevsPtr := &ForeignElevs
 	//var timeOutTimer = time.Now()
-//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
-
-	go elevio.Redecide(redecideChan, TxElevInfoChan, RxElevInfoChan, NewFloorChan, MyElev, MyOrders, MyElevPtr)
+	//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
+	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
 			fmt.Printf("  neworder\n")
-
 			elevio.AddNewOrders(newOrder, &MyOrders, &CombinedHMatrix, MyElev)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			TxP2PElevInfoChan <- ForeignElevs
-			redecideChan <- true
 
 		case newFloor := <-NewFloorChan:
 			elevio.SetFloorIndicator(newFloor)
@@ -81,14 +77,32 @@ func RunElevator(
 				elevio.ArrivedAtOrder(MyElevPtr) //Opendoors, wait, wait for them to press cab etc
 			}
 			fmt.Printf("  order not at new floor:    %v\n", newFloor)
-			redecideChan <- true
+			fmt.Printf("  redeciding locally\n")
+			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+			MyElev.Direction = newDir
+			MyElev.State = newState
+			elevio.SetMotorDirection(newDir)
+			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+				RxElevInfoChan <- MyElev
+			} else {
+				TxElevInfoChan <- MyElev
+			}
 
 		case newBtnPress := <-NewBtnPressChan:
 			fmt.Printf("  Newbtnpress  \n ")
 			if newBtnPress.Button == localTypes.Button_Cab {
 				elevio.AddOneNewOrderBtn(newBtnPress, MyElevPtr)
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-				redecideChan <- true
+				fmt.Printf("  redeciding locally\n")
+				newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+				MyElev.Direction = newDir
+				MyElev.State = newState
+				elevio.SetMotorDirection(newDir)
+				if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+					RxElevInfoChan <- MyElev
+				} else {
+					TxElevInfoChan <- MyElev
+				}
 			} else {
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
@@ -111,12 +125,12 @@ func RunElevator(
 			fmt.Printf("  sending ForeignElev: \n")
 			TxP2PElevInfoChan <- ForeignElevs
 
-		// case timer := <-p2pTicker.C:
-		// 	fmt.Printf("  timer %v\n", timer)
+			// case timer := <-p2pTicker.C:
+			// 	fmt.Printf("  timer %v\n", timer)
 
-		// 	elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
-		// 	fmt.Printf("  sending ForeignElev: \n")
-		// 	TxP2PElevInfoChan <- ForeignElevs
+			// 	elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
+			// 	fmt.Printf("  sending ForeignElev: \n")
+			// 	TxP2PElevInfoChan <- ForeignElevs
 		}
 	}
 
