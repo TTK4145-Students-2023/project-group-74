@@ -15,7 +15,7 @@ func Redecide(redecideChan <-chan bool, TxElevInfoChan chan<- localTypes.LOCAL_E
 			break
 		}
 		ChooseDirectionAndState(MyElevPtr, MyOrders)
-		if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+		if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 			RxElevInfoChan <- MyElev
 		} else {
 			TxElevInfoChan <- MyElev
@@ -27,7 +27,7 @@ func Redecide(redecideChan <-chan bool, TxElevInfoChan chan<- localTypes.LOCAL_E
 }
 
 func ArrivedAtOrder(
-	MyElev localTypes.LOCAL_ELEVATOR_INFO) {
+	MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.LOCAL_ELEVATOR_INFO{
 
 	MyElev.Direction = localTypes.DIR_stop
 	MyElev.Floor = GetFloor()
@@ -80,13 +80,13 @@ func AddNewOrders(newOrder localTypes.ORDER, MyOrders *localTypes.HMATRIX, Combi
 	addNewOrdersToHMatrix(newOrder, CombinedHMatrix)
 }*/
 
-func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) {
+func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO)localTypes.P2P_ELEV_INFO {
 	for i := 0; i < len(ForeignElevs); i++ {
 		if ForeignElevs[i].ElevID == MyElev.ElevID {
 		    ForeignElevs[i] = MyElev
 		}
 	}
-	return foreignElevs
+	return ForeignElevs
 }
 
 
@@ -99,7 +99,7 @@ func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix loc
 	}
 }
 
-func LocalElevInitFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO) {
+func LocalElevInitFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.LOCAL_ELEVATOR_INFO {
 	for GetFloor() == -1 {
 		SetMotorDirection(localTypes.DIR_down)
 	}
@@ -118,12 +118,12 @@ func GetFinOrder(floor int, pastDir localTypes.MOTOR_DIR) localTypes.BUTTON_INFO
 	return btninfo
 }
 
-func RemoveOneOrderBtn(finishedOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO) {
+func RemoveOneOrderBtn(finishedOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO)([4]bool) {
 	MyElev.CabCalls[finishedOrder.Floor] = false
 	return MyElev.CabCalls
 }
 
-func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO) { //neccecary?
+func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO) ([4]bool){ //neccecary?
 	MyElev.CabCalls[newOrder.Floor] = true
 	return MyElev.CabCalls
 }
@@ -208,7 +208,7 @@ func requests_below(MyElev *localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.
 	return false
 }
 
-func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRIX) [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool {
+func combineOrders(MyCabs[localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRIX) [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool {
 	var result [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool
 	for i := 0; i < localTypes.NUM_FLOORS; i++ {
 		result[i][0] = MyCabs[i]
@@ -219,7 +219,7 @@ func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATR
 	return result
 }
 
-func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) {
+func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.HMATRIX{
 	for f := 0; f < localTypes.NUM_FLOORS; f++ {
 		for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {
 			(MyOrders)[f][btn] = newOrder[MyElev.ElevID][f][btn]
@@ -228,8 +228,8 @@ func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX,
 	return MyOrders
 }
 
-func addNewOrdersToHMatrix(newOrder localTypes.ORDER) {
-	CombinedHMatrix = [][]
+func addNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
+	var CombinedHMatrix localTypes.HMATRIX
 	for ID := range newOrder {
 		for f := 0; f < localTypes.NUM_FLOORS; f++ {
 			for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {

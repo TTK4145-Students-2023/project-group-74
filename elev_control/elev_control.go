@@ -92,7 +92,7 @@ func RunElevator(
 				redecideChan <- true
 			} else {
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 						fmt.Printf("Run Elevator: newBtnPress: new hall request!\n")
 						RxNewHallRequestChan <- newBtnPress
 					} else {
