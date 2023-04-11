@@ -35,7 +35,7 @@ func ArrivedAtOrder(
 	SetMotorDirection(localTypes.DIR_stop)
 	SetDoorOpenLamp(true)
 
-	doorTimer := time.NewTimer(3 * time.Second)
+	doorTimer := time.NewTimer(3*time.Second)
 	<-doorTimer.C
 	doorTimer.Stop()
 	SetDoorOpenLamp(false)
@@ -89,7 +89,6 @@ func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs l
 	return foreignElevs
 }
 
-foreginelev[1]
 
 func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix localTypes.HMATRIX) {
 	for f := 0; f < localTypes.NUM_FLOORS; f++ {
