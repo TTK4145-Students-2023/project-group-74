@@ -27,7 +27,7 @@ func Redecide(redecideChan <-chan bool, TxElevInfoChan chan<- localTypes.LOCAL_E
 }
 
 func ArrivedAtOrder(
-	MyElev *localTypes.LOCAL_ELEVATOR_INFO) {
+	MyElev localTypes.LOCAL_ELEVATOR_INFO) {
 
 	MyElev.Direction = localTypes.DIR_stop
 	MyElev.Floor = GetFloor()
@@ -40,6 +40,8 @@ func ArrivedAtOrder(
 	doorTimer.Stop()
 	SetDoorOpenLamp(false)
 	MyElev.State = localTypes.Idle
+
+	return MyElev
 }
 
 func SendWithDelay(foreignElevs localTypes.P2P_ELEV_INFO, TxChannel chan<- localTypes.P2P_ELEV_INFO) {
@@ -72,19 +74,22 @@ func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 	}
 	return false
 }
-
+/*
 func AddNewOrders(newOrder localTypes.ORDER, MyOrders *localTypes.HMATRIX, CombinedHMatrix *localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) {
 	addNewOrdersToLocal(newOrder, MyOrders, MyElev)
 	addNewOrdersToHMatrix(newOrder, CombinedHMatrix)
-}
+}*/
 
-func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs *localTypes.P2P_ELEV_INFO) {
-	for ForeignElev := 0; ForeignElev < len(*ForeignElevs); ForeignElev++ {
-		if (*ForeignElevs)[ForeignElev].ElevID == MyElev.ElevID {
-			(*ForeignElevs)[ForeignElev] = MyElev
+func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) {
+	for i := 0; i < len(ForeignElevs); i++ {
+		if ForeignElevs[i].ElevID == MyElev.ElevID {
+		    ForeignElevs[i] = MyElev
 		}
 	}
+	return foreignElevs
 }
+
+foreginelev[1]
 
 func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix localTypes.HMATRIX) {
 	for f := 0; f < localTypes.NUM_FLOORS; f++ {
@@ -95,12 +100,14 @@ func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix loc
 	}
 }
 
-func LocalElevInitFloor(MyElev *localTypes.LOCAL_ELEVATOR_INFO) {
+func LocalElevInitFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO) {
 	for GetFloor() == -1 {
 		SetMotorDirection(localTypes.DIR_down)
 	}
 	SetMotorDirection(localTypes.DIR_stop)
 	MyElev.Floor = GetFloor()
+
+	return MyElev
 }
 
 func GetFinOrder(floor int, pastDir localTypes.MOTOR_DIR) localTypes.BUTTON_INFO {
@@ -114,10 +121,12 @@ func GetFinOrder(floor int, pastDir localTypes.MOTOR_DIR) localTypes.BUTTON_INFO
 
 func RemoveOneOrderBtn(finishedOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO) {
 	MyElev.CabCalls[finishedOrder.Floor] = false
+	return MyElev.CabCalls
 }
 
 func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO) { //neccecary?
 	MyElev.CabCalls[newOrder.Floor] = true
+	return MyElev.CabCalls
 }
 
 //Internal funcs
@@ -211,22 +220,25 @@ func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATR
 	return result
 }
 
-func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders *localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) {
+func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) {
 	for f := 0; f < localTypes.NUM_FLOORS; f++ {
 		for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {
-			(*MyOrders)[f][btn] = newOrder[MyElev.ElevID][f][btn]
+			(MyOrders)[f][btn] = newOrder[MyElev.ElevID][f][btn]
 		}
 	}
+	return MyOrders
 }
 
-func addNewOrdersToHMatrix(newOrder localTypes.ORDER, CombinedHMatrix *localTypes.HMATRIX) {
+func addNewOrdersToHMatrix(newOrder localTypes.ORDER) {
+	CombinedHMatrix = [][]
 	for ID := range newOrder {
 		for f := 0; f < localTypes.NUM_FLOORS; f++ {
 			for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {
 				if !CombinedHMatrix[f][btn] {
-					(*CombinedHMatrix)[f][btn] = newOrder[ID][f][btn]
+					(CombinedHMatrix)[f][btn] = newOrder[ID][f][btn]
 				}
 			}
 		}
 	}
+	return CombinedHMatrix
 }

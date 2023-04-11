@@ -38,23 +38,24 @@ func RunElevator(
 			ElevID:    localTypes.MyIP,
 		}
 
-	MyElevPtr := &MyElev
-	elevio.LocalElevInitFloor(MyElevPtr)
+	//MyElevPtr := &MyElev Remove pointers 
+	MyElev = elevio.LocalElevInitFloor(MyElev)
 	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
-	ForeignElevsPtr := &ForeignElevs
+	//ForeignElevsPtr := &ForeignElevs Remove pointers 
 	//var timeOutTimer = time.Now()
 //	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
 
-	go elevio.Redecide(redecideChan, TxElevInfoChan, RxElevInfoChan, NewFloorChan, MyElev, MyOrders, MyElevPtr)
+	go elevio.Redecide(redecideChan, TxElevInfoChan, RxElevInfoChan, NewFloorChan, MyElev, MyOrders, MyElevPtr) //remove MyElevPtr
 
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
 			fmt.Printf("  neworder\n")
 
-			elevio.AddNewOrders(newOrder, &MyOrders, &CombinedHMatrix, MyElev)
+			MyOrder = elevio.addNewOrdersToLocal(newOrder, MyOrders, MyElev)
+			CombinedHMatrix = addNewOrdersToHMatrix(newOrder)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			TxP2PElevInfoChan <- ForeignElevs
 			redecideChan <- true
@@ -63,30 +64,30 @@ func RunElevator(
 			elevio.SetFloorIndicator(newFloor)
 			fmt.Printf("  arrived at new floor:    %v\n", newFloor)
 			MyElev.Floor = newFloor
-			if elevio.IsOrderAtFloor(MyElev, MyOrders) == true {
+			if elevio.IsOrderAtFloor(MyElev, MyOrders){
 				fmt.Printf("  order at new floor:    %v\n", newFloor)
 
 				finishedOrder := elevio.GetFinOrder(newFloor, MyElev.Direction)
 				if finishedOrder.Button == localTypes.Button_Cab {
-					elevio.RemoveOneOrderBtn(finishedOrder, MyElevPtr)
+					MyElev.CabCalls = elevio.RemoveOneOrderBtn(finishedOrder, MyElev)
 					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				} else {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers){
 						fmt.Printf("RunElevator: New Floor: finished hall order\n")
 						RxFinishedHallOrderChan <- finishedOrder
 					} else {
 						TxFinishedHallOrderChan <- finishedOrder
 					}
 				}
-				elevio.ArrivedAtOrder(MyElevPtr) //Opendoors, wait, wait for them to press cab etc
+				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait, wait for them to press cab etc
 			}
 			fmt.Printf("  order not at new floor:    %v\n", newFloor)
-			redecideChan <- true
+			redecideChan <- true //Cange to redecide function
 
 		case newBtnPress := <-NewBtnPressChan:
 			fmt.Printf("  Newbtnpress  \n ")
 			if newBtnPress.Button == localTypes.Button_Cab {
-				elevio.AddOneNewOrderBtn(newBtnPress, MyElevPtr)
+				MyElev.CabCalls = elevio.AddOneNewOrderBtn(newBtnPress, MyElevPtr)
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				redecideChan <- true
 			} else {
@@ -106,7 +107,7 @@ func RunElevator(
 			fmt.Printf("  neewforeign \n")
 
 			ForeignElevs = NewForeignInfo
-			elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
+			ForeginElevs = elevio.AddLocalToForeignInfo(MyElev, ForeignElevs)
 
 			fmt.Printf("  sending ForeignElev: \n")
 			TxP2PElevInfoChan <- ForeignElevs
