@@ -43,9 +43,6 @@ func PollButtons(receiver chan<- localTypes.BUTTON_INFO) {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v {
 					receiver <- localTypes.BUTTON_INFO{Floor: f, Button: localTypes.BUTTON_TYPE(b)}
-					fmt.Println("newbtnpress floor %b", f)
-					fmt.Println("newbtnpress btn %b", b)
-
 				}
 				prev[f][b] = v
 			}

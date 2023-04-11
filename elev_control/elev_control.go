@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
-	"time"
 )
 
 //Channels:
@@ -36,24 +35,21 @@ func RunElevator(
 			ElevID:    localTypes.MyIP,
 		}
 
-
-	//MyElevPtr := &MyElev Remove pointers 
+	//MyElevPtr := &MyElev Remove pointers
 	MyElev = elevio.LocalElevInitFloor(MyElev)
 
 	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
-	//ForeignElevsPtr := &ForeignElevs Remove pointers 
+	//ForeignElevsPtr := &ForeignElevs Remove pointers
 	//var timeOutTimer = time.Now()
 	//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
 
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
-
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-
 
 			MyOrders = elevio.AddNewOrdersToLocal(newOrder, MyOrders, MyElev)
 			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
@@ -64,7 +60,7 @@ func RunElevator(
 			MyElev.Direction = newDir
 			MyElev.State = newState
 			elevio.SetMotorDirection(newDir)
-			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) == true {
+			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 				RxElevInfoChan <- MyElev
 			} else {
 				TxElevInfoChan <- MyElev
@@ -72,22 +68,19 @@ func RunElevator(
 
 		case newFloor := <-NewFloorChan:
 			elevio.SetFloorIndicator(newFloor)
-			fmt.Printf("  arrived at new floor:    %v\n", newFloor)
 			MyElev.Floor = newFloor
 
-			if elevio.IsOrderAtFloor(MyElev, MyOrders){
-				fmt.Printf("  order at new floor:    %v\n", newFloor)
-
+			if elevio.IsOrderAtFloor(MyElev, MyOrders) {
 				finishedOrder := elevio.GetFinOrder(newFloor, MyElev.Direction)
 				if finishedOrder.Button == localTypes.Button_Cab {
 					MyElev.CabCalls = elevio.RemoveOneOrderBtn(finishedOrder, MyElev)
 					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-					fmt.Printf("finished cab order\n")
+					fmt.Printf("LE:finished cab order\n")
 
 				} else {
 
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers){
-						fmt.Printf("RunElevator: New Floor: finished hall order\n")
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
+						fmt.Printf("LE:finished hall order\n")
 						RxFinishedHallOrderChan <- finishedOrder
 					} else {
 						TxFinishedHallOrderChan <- finishedOrder
@@ -106,20 +99,17 @@ func RunElevator(
 			} else {
 				TxElevInfoChan <- MyElev
 			}
-			fmt.Printf(" checkers\n")
-
 
 		case newBtnPress := <-NewBtnPressChan:
-			fmt.Printf("  Newbtnpress  \n ")
 			if newBtnPress.Button == localTypes.Button_Cab {
+				fmt.Printf("Run Elevator: new cab request!\n")
 				MyElev.CabCalls = elevio.AddOneNewOrderBtn(newBtnPress, MyElev)
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-				fmt.Printf("  redeciding locally\n")
 				newDir, newState := elevio.FindDirection(MyElev, MyOrders)
 				MyElev.Direction = newDir
 				MyElev.State = newState
 				elevio.SetMotorDirection(newDir)
-				if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers){
+				if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 					RxElevInfoChan <- MyElev
 				} else {
 					TxElevInfoChan <- MyElev
@@ -128,7 +118,7 @@ func RunElevator(
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
 
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						fmt.Printf("Run Elevator: newBtnPress: new hall request!\n")
+						fmt.Printf("Run Elevator: new hall request!\n")
 
 						RxNewHallRequestChan <- newBtnPress
 					} else {
@@ -141,14 +131,10 @@ func RunElevator(
 		case NewForeignInfo := <-RxP2PElevInfoChan:
 			ForeignElevs = NewForeignInfo
 
-			ForeginElevs = elevio.AddLocalToForeignInfo(MyElev, ForeignElevs)
-
-			fmt.Printf("  sending ForeignElev: \n")
-
+			ForeignElevs = elevio.AddLocalToForeignInfo(MyElev, ForeignElevs)
 			TxP2PElevInfoChan <- ForeignElevs
 
 		default:
-			time.Sleep((time.Millisecond * 200))
 
 			// case timer := <-p2pTicker.C:
 			// 	fmt.Printf("  timer %v\n", timer)
