@@ -45,7 +45,7 @@ func RunElevator(
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	//ForeignElevsPtr := &ForeignElevs Remove pointers 
 	//var timeOutTimer = time.Now()
-//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
+	//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
 
 	go elevio.Redecide(redecideChan, TxElevInfoChan, RxElevInfoChan, NewFloorChan, MyElev, MyOrders, MyElevPtr) //remove MyElevPtr
 
@@ -54,8 +54,8 @@ func RunElevator(
 		case newOrder := <-RxNewOrdersChan:
 			fmt.Printf("  neworder\n")
 
-			MyOrder = elevio.addNewOrdersToLocal(newOrder, MyOrders, MyElev)
-			CombinedHMatrix = addNewOrdersToHMatrix(newOrder)
+			MyOrders = elevio.AddNewOrdersToLocal(newOrder, MyOrders, MyElev)
+			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			TxP2PElevInfoChan <- ForeignElevs
 			redecideChan <- true
@@ -87,7 +87,7 @@ func RunElevator(
 		case newBtnPress := <-NewBtnPressChan:
 			fmt.Printf("  Newbtnpress  \n ")
 			if newBtnPress.Button == localTypes.Button_Cab {
-				MyElev.CabCalls = elevio.AddOneNewOrderBtn(newBtnPress, MyElevPtr)
+				MyElev.CabCalls = elevio.AddOneNewOrderBtn(newBtnPress, MyElev)
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 				redecideChan <- true
 			} else {

@@ -74,11 +74,6 @@ func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 	}
 	return false
 }
-/*
-func AddNewOrders(newOrder localTypes.ORDER, MyOrders *localTypes.HMATRIX, CombinedHMatrix *localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) {
-	addNewOrdersToLocal(newOrder, MyOrders, MyElev)
-	addNewOrdersToHMatrix(newOrder, CombinedHMatrix)
-}*/
 
 func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO)localTypes.P2P_ELEV_INFO {
 	for i := 0; i < len(ForeignElevs); i++ {
@@ -118,12 +113,12 @@ func GetFinOrder(floor int, pastDir localTypes.MOTOR_DIR) localTypes.BUTTON_INFO
 	return btninfo
 }
 
-func RemoveOneOrderBtn(finishedOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO)([4]bool) {
+func RemoveOneOrderBtn(finishedOrder localTypes.BUTTON_INFO, MyElev localTypes.LOCAL_ELEVATOR_INFO)([4]bool) {
 	MyElev.CabCalls[finishedOrder.Floor] = false
 	return MyElev.CabCalls
 }
 
-func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev *localTypes.LOCAL_ELEVATOR_INFO) ([4]bool){ //neccecary?
+func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev localTypes.LOCAL_ELEVATOR_INFO) ([4]bool){ //neccecary?
 	MyElev.CabCalls[newOrder.Floor] = true
 	return MyElev.CabCalls
 }
@@ -219,7 +214,7 @@ func combineOrders(MyCabs[localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRI
 	return result
 }
 
-func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.HMATRIX{
+func AddNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.HMATRIX{
 	for f := 0; f < localTypes.NUM_FLOORS; f++ {
 		for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {
 			(MyOrders)[f][btn] = newOrder[MyElev.ElevID][f][btn]
@@ -228,7 +223,7 @@ func addNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX,
 	return MyOrders
 }
 
-func addNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
+func AddNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
 	var CombinedHMatrix localTypes.HMATRIX
 	for ID := range newOrder {
 		for f := 0; f < localTypes.NUM_FLOORS; f++ {
