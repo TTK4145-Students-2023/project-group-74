@@ -38,7 +38,7 @@ func RunElevator(
 
 	MyElevPtr := &MyElev
 	elevio.LocalElevInitFloor(&MyElev)
-	
+
 	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
 	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)

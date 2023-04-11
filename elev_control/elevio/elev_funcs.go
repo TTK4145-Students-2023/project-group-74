@@ -1,11 +1,9 @@
 package elevio
 
 import (
-
 	"project-group-74/localTypes"
 	"time"
 )
-
 
 func ArrivedAtOrder(
 	MyElev *localTypes.LOCAL_ELEVATOR_INFO) {
