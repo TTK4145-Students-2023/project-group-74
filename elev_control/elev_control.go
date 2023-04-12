@@ -44,29 +44,48 @@ func RunElevator(
 	//ForeignElevsPtr := &ForeignElevs Remove pointers
 	//var timeOutTimer = time.Now()
 	//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
+	fmt.Printf("LE:innit\n")
 
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-
 			MyOrders = elevio.AddNewOrdersToLocal(newOrder, MyOrders, MyElev)
 			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
 
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			TxP2PElevInfoChan <- ForeignElevs
 			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+
+			if newState==localTypes.Door_open {
+				MyElev.CabCalls[MyElev.Floor]=false
+				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+				
+				
+
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
+						fmt.Printf("LE:finished hall order\n")
+						RxFinishedHallOrderChan <- finishedOrder
+					} else {
+						TxFinishedHallOrderChan <- finishedOrder
+					}
+				}
+				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait, wait for them to press cab etc
+			}
+
 			MyElev.Direction = newDir
 			MyElev.State = newState
 			elevio.SetMotorDirection(newDir)
 			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 				RxElevInfoChan <- MyElev
+				fmt.Printf("LE:Respond to new orders\n")
 			} else {
 				TxElevInfoChan <- MyElev
 			}
 
 		case newFloor := <-NewFloorChan:
+			fmt.Printf("LE:NewFLoorProc\n")
 			elevio.SetFloorIndicator(newFloor)
 			MyElev.Floor = newFloor
 
@@ -101,6 +120,8 @@ func RunElevator(
 			}
 
 		case newBtnPress := <-NewBtnPressChan:
+			fmt.Printf("LE:NewBTNProc\n")
+
 			if newBtnPress.Button == localTypes.Button_Cab {
 				fmt.Printf("Run Elevator: new cab request!\n")
 				MyElev.CabCalls = elevio.AddOneNewOrderBtn(newBtnPress, MyElev)
@@ -129,12 +150,15 @@ func RunElevator(
 			}
 
 		case NewForeignInfo := <-RxP2PElevInfoChan:
+			fmt.Printf("LE:Newp2pelev\n")
+
 			ForeignElevs = NewForeignInfo
 
 			ForeignElevs = elevio.AddLocalToForeignInfo(MyElev, ForeignElevs)
 			TxP2PElevInfoChan <- ForeignElevs
 
 		default:
+			fmt.Printf("LE:default?\n")
 
 			// case timer := <-p2pTicker.C:
 			// 	fmt.Printf("  timer %v\n", timer)

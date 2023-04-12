@@ -40,10 +40,10 @@ func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 	btntype := dir2Btntype(MyElev.Direction)
 
 	if btntype == localTypes.Button_Cab {
-		if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][localTypes.Button_hall_down] || MyOrders[GetFloor()][localTypes.Button_hall_up] {
+		if MyElev.CabCalls[MyElev.Floor] || MyOrders[MyElev.Floor][localTypes.Button_hall_down] || MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
 			return true
 		}
-	} else if MyElev.CabCalls[GetFloor()] || MyOrders[GetFloor()][btntype] {
+	} else if MyElev.CabCalls[MyElev.Floor] || MyOrders[MyElev.Floor][btntype] {
 		return true
 	}
 	return false
@@ -78,8 +78,23 @@ func LocalElevInitFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.LOCAL_
 	return MyElev
 }
 
+func GetfinCab(MyElev) localTypes.BUTTON_TYPE{
+	btn= MyElev.CabCalls[MyElev.Floor]
+	
+	btninfo := localTypes.BUTTON_INFO{
+		Button: btn,
+		Floor:  MyElev.Floor,
+	}
+	return btn
+}
+
 func GetFinOrder(floor int, pastDir localTypes.MOTOR_DIR) localTypes.BUTTON_INFO {
-	btn := dir2Btntype(pastDir)
+	if cab order at floor
+
+
+
+
+
 	btninfo := localTypes.BUTTON_INFO{
 		Button: btn,
 		Floor:  floor,
