@@ -47,57 +47,7 @@ func orderWatchdog(
 	}
 }
 
-func CombineHRAInput(
-	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
-	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
-	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
-	TxHRAInputChan chan<- localTypes.HRAInput) {
-
-	currentHRAInput := newAllFalseHRAInput()
-
-	for {
-		select {
-		case newElevInfo := <-RxElevInfoChan:
-			//if newElevInfo.State !isValid() || !isValidID(newElevInfo.ElevID){
-			//	panic("Corrupt elevator data from RxElevInfoChan")
-			//}
-			newHRAelev := localState2HRASTATE(newElevInfo)
-			currentHRAInput.States[newElevInfo.ElevID] = newHRAelev
-			fmt.Printf("DLOCC: HRAelev: %v\n", currentHRAInput)
-			TxHRAInputChan <- currentHRAInput
-			fmt.Printf("DLOCC: NEWHRAinput sent\n")
-
-		case newHRequest := <-RxNewHallRequestChan:
-			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
-			//	panic("Corrupt elevator data from RxNewHallRequestChan")
-			//}
-			if !currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] {
-				fmt.Printf("DLOCC: LASTHRAinput: %v\n", currentHRAInput)
-				currentHRAInput.HallRequests[newHRequest.Floor][newHRequest.Button] = true
-				fmt.Printf("DLOCC: NEWHRAinput: %v\n", currentHRAInput)
-				TxHRAInputChan <- currentHRAInput
-				fmt.Printf("DLOCC: NEWHRAinput sent\n")
-
-			}
-
-		case finishedHOrder := <-RxFinishedHallOrderChan:
-			//if !isValidFloor(finishedHOrder.Floor) || finishedHOrder.Button !isValid(){
-			//	panic("Corrupt elevator data from RxFinishedHallOrderChan")
-			//}
-			fmt.Printf("DLOCC: finishedHOrder: %v\n \n", currentHRAInput)
-			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = false
-			TxHRAInputChan <- currentHRAInput
-			fmt.Printf("DLOCC: NEWHRAinput sent \n")
-
-		default:
-			time.Sleep((time.Millisecond * localTypes.ORDER_MIN_UPDATE_INTERVAL))
-
-		}
-
-	}
-}
-
-func newAllFalseHRAInput() localTypes.HRAInput {
+func NewAllFalseHRAInput() localTypes.HRAInput {
 	output := localTypes.HRAInput{}
 	for i := range output.HallRequests {
 		for j := range output.HallRequests[i] {
@@ -128,7 +78,7 @@ func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[s
 	return output
 }
 
-func localState2HRASTATE(newElevInfo localTypes.LOCAL_ELEVATOR_INFO) localTypes.HRAElevState {
+func LocalState2HRASTATE(newElevInfo localTypes.LOCAL_ELEVATOR_INFO) localTypes.HRAElevState {
 	output := localTypes.HRAElevState{
 		State:       getElevStateString(newElevInfo.State),
 		Floor:       newElevInfo.Floor,
