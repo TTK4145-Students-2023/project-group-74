@@ -15,7 +15,7 @@ import (
 const (
 	PeerPort      = 15699
 	StatePort     = 16599
-	BroadcastRate = 2 * time.Second
+	BroadcastRate = 100 * time.Millisecond
 )
 
 // ************** main P2P func *************
@@ -26,8 +26,8 @@ func P2Pnet(
 	RxNewHallRequestChan chan<- localTypes.BUTTON_INFO,
 	TxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
 	RxFinishedHallOrderChan chan<- localTypes.BUTTON_INFO,
-	TxNewOrdersChan <-chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
-	RxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	TxNewOrdersChan <-chan map[string]localTypes.HMATRIX,
+	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
 	TxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
 	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO) {
 
@@ -37,24 +37,24 @@ func P2Pnet(
 		newHallReq  = localTypes.BUTTON_INFO{}
 		finHallReq  = localTypes.BUTTON_INFO{}
 		localState  = localTypes.LOCAL_ELEVATOR_INFO{}
-		newOrder    = map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool{}
+		newOrder    = map[string]localTypes.HMATRIX{}
 		// Rx var
 		rxP2pElevinfo = localTypes.P2P_ELEV_INFO{}
 		rxnewHallReq  = localTypes.BUTTON_INFO{}
 		rxfinHallReq  = localTypes.BUTTON_INFO{}
 		rxLocalState  = localTypes.LOCAL_ELEVATOR_INFO{}
-		rxnewOrder    = map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool{}
+		rxnewOrder    = map[string]localTypes.HMATRIX{}
 		// Tx chan
 		BCLocalStateTx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		BCNewHallReqTx   = make(chan localTypes.BUTTON_INFO)
 		BCFinHallOrderTx = make(chan localTypes.BUTTON_INFO)
-		BCNewOrderTx     = make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
+		BCNewOrderTx     = make(chan map[string]localTypes.HMATRIX)
 		BCP2PElevInfoTx  = make(chan localTypes.P2P_ELEV_INFO)
 		// Rx chan
 		RecieveLocalStateRx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		RecieveNewHallReqRx   = make(chan localTypes.BUTTON_INFO)
 		RecieveFinHallOrderRx = make(chan localTypes.BUTTON_INFO)
-		RecieveOrderRx        = make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
+		RecieveOrderRx        = make(chan map[string]localTypes.HMATRIX)
 		RecieveP2PElevInfo    = make(chan localTypes.P2P_ELEV_INFO)
 	)
 
@@ -93,8 +93,6 @@ func P2Pnet(
 	recieveTimer := time.NewTimer(1)
 	recieveTimer.Stop()
 
-	fmt.Printf("RecieveTimer: %v\n", recieveTimer)
-
 	for {
 		select {
 
@@ -108,8 +106,7 @@ func P2Pnet(
 		case finHallReq = <-TxFinishedHallOrderChan:
 		case newOrder = <-TxNewOrdersChan:
 		case p2pElevInfo = <-TxP2PElevInfoChan:
-		case <-broadcastTimer.C:
-			fmt.Printf("NET.BC: Broadcasting\n")
+		case <-broadcastTimer.C: /// 
 			BCLocalStateTx <- localState
 			BCNewHallReqTx <- newHallReq
 			BCFinHallOrderTx <- finHallReq
@@ -118,8 +115,7 @@ func P2Pnet(
 			broadcastTimer.Reset(BroadcastRate)
 
 			// Reading from network
-		case newrxP2pElevinfo := <-RecieveP2PElevInfo:
-			fmt.Printf("NET.RX: P2PElevInfo\n")
+		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
 			sort.Slice(rxP2pElevinfo, func(i, j int) bool {
 				return rxP2pElevinfo[i].ElevID < rxP2pElevinfo[j].ElevID
 			})
@@ -131,25 +127,21 @@ func P2Pnet(
 				RxP2PElevInfoChan <- rxP2pElevinfo
 			}
 		case newrxnewHallReq := <-RecieveNewHallReqRx:
-			fmt.Printf("NET.RX: newHallReq\n")
 			if rxnewHallReq != newrxnewHallReq {
 				rxnewHallReq = newrxnewHallReq
 				RxNewHallRequestChan <- rxnewHallReq
 			}
 		case newrxfinHallReq := <-RecieveFinHallOrderRx:
-			fmt.Printf("NET.RX: finHallreq\n")
 			if rxfinHallReq != newrxfinHallReq {
 				rxfinHallReq = newrxfinHallReq
 				RxFinishedHallOrderChan <- rxfinHallReq
 			}
 		case newrxLocalState := <-RecieveLocalStateRx:
-			fmt.Printf("NET.RX: localState\n")
 			if rxLocalState != newrxLocalState {
 				rxLocalState = newrxLocalState
 				RxElevInfoChan <- rxLocalState
 			}
 		case newrxnewOrder := <-RecieveOrderRx:
-			fmt.Printf("NET.RX: newOrder\n")
 			if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
 				rxnewOrder = newrxnewOrder
 				RxNewOrdersChan <- rxnewOrder

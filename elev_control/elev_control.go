@@ -4,23 +4,17 @@ import (
 	"fmt"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
+	"time"
 )
 
-//Channels:
-//Output : To DLOCC : ElevInfoChan,NewHallRequestChan,FinishedHOrderChan
-// To P2P   : TxP2PElevInfoChan
-//Inputs : From DLOCC    : NewOrdersChan
-// From Hardware : NewBtnPressChan, NewFloorChan
-// From P2P      : RxP2pElevInfoChan
-
-func RunElevator(
+func RunElevator(myIP string,
 	TxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO,
 	RxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO,
 	TxNewHallRequestChan chan<- localTypes.BUTTON_INFO,
 	RxNewHallRequestChan chan<- localTypes.BUTTON_INFO,
 	TxFinishedHallOrderChan chan<- localTypes.BUTTON_INFO,
 	RxFinishedHallOrderChan chan<- localTypes.BUTTON_INFO,
-	RxNewOrdersChan <-chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	RxNewOrdersChan <-chan map[string]localTypes.HMATRIX,
 	TxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO,
 	RxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
 	NewFloorChan chan int,
@@ -29,21 +23,36 @@ func RunElevator(
 	MyElev :=
 		localTypes.LOCAL_ELEVATOR_INFO{
 			State:     localTypes.Idle,
-			Floor:     elevio.GetFloor(),
+			Floor:     -1,
 			Direction: localTypes.DIR_stop,
 			CabCalls:  [localTypes.NUM_FLOORS]bool{},
-			ElevID:    localTypes.MyIP,
+			ElevID:    myIP,
 		}
 
 	//MyElevPtr := &MyElev Remove pointers
-	MyElev = elevio.LocalElevInitFloor(MyElev)
+	initializing := true
+
+	for initializing {
+		select {
+		case MyElev.Floor = <-NewFloorChan:
+			elevio.SetMotorDirection(localTypes.DIR_stop)
+			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
+				RxElevInfoChan <- MyElev
+			} else {
+				TxElevInfoChan <- MyElev
+			}
+			initializing = false
+			fmt.Printf("Initializing finished!\n")
+		default:
+			elevio.SetMotorDirection(localTypes.DIR_down)
+			time.Sleep(80 * time.Millisecond)
+		}
+	}
+	fmt.Printf("My Elev: %+v\n", MyElev)
 
 	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
-	ForeignElevs := make(localTypes.P2P_ELEV_INFO, 0)
-	//ForeignElevsPtr := &ForeignElevs Remove pointers
-	//var timeOutTimer = time.Now()
-	//	p2pTicker := time.NewTicker(localTypes.P2P_UPDATE_INTERVAL * time.Millisecond)
+	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	fmt.Printf("LE:innit\n")
 
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
@@ -51,11 +60,18 @@ func RunElevator(
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-			MyOrders = elevio.AddNewOrdersToLocal(newOrder, MyOrders, MyElev)
-			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
+			MyOrders = newOrder[myIP]
+
+			for _, orders := range newOrder {
+				for floor, buttons := range orders {
+					for button, val := range buttons {
+						CombinedHMatrix[floor][button] = CombinedHMatrix[floor][button] || val
+					}
+				}
+			}
 
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-			TxP2PElevInfoChan <- ForeignElevs
+			TxP2PElevInfoChan <- AllElevs
 			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
 			MyElev.Direction, MyElev.State = newDir, newState
 			elevio.SetMotorDirection(newDir)
@@ -120,7 +136,7 @@ func RunElevator(
 						}
 					}
 				}
-				if changed == true {
+				if changed {
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 						RxFinishedHallOrderChan <- completedorder
 					} else {
@@ -170,23 +186,12 @@ func RunElevator(
 				}
 			}
 
-		case NewForeignInfo := <-RxP2PElevInfoChan:
+		case AllElevs = <-RxP2PElevInfoChan:
 			fmt.Printf("LE:Newp2pelev\n")
 
-			ForeignElevs = NewForeignInfo
 
-			ForeignElevs = elevio.AddLocalToForeignInfo(MyElev, ForeignElevs)
-			TxP2PElevInfoChan <- ForeignElevs
-
-		default:
-			fmt.Printf("LE:default?\n")
-
-			// case timer := <-p2pTicker.C:
-			// 	fmt.Printf("  timer %v\n", timer)
-
-			// 	elevio.AddLocalToForeignInfo(MyElev, ForeignElevsPtr)
-			// 	fmt.Printf("  sending ForeignElev: \n")
-			// 	TxP2PElevInfoChan <- ForeignElevs
+			AllElevs = elevio.AddLocalToForeignInfo(MyElev, AllElevs)
+			TxP2PElevInfoChan <- AllElevs
 		}
 	}
 

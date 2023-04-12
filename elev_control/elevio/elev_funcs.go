@@ -9,7 +9,6 @@ func ArrivedAtOrder(
 	MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.LOCAL_ELEVATOR_INFO {
 
 	MyElev.Direction = localTypes.DIR_stop
-	MyElev.Floor = GetFloor()
 	MyElev.State = localTypes.Door_open
 	SetMotorDirection(localTypes.DIR_stop)
 	SetDoorOpenLamp(true)
@@ -89,7 +88,8 @@ func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev localTypes.LOCAL_
 //Internal funcs
 
 func FindDirection(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) (localTypes.MOTOR_DIR, localTypes.ELEVATOR_STATE) {
-	switch {
+
+	switch true {
 	case Requests_here(MyElev, MyOrders):
 		return localTypes.DIR_stop, localTypes.Door_open
 	case MyElev.Direction == localTypes.DIR_up && Requests_above(MyElev, MyOrders):

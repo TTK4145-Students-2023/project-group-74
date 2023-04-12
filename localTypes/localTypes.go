@@ -157,9 +157,9 @@ func splitIPAddr(ip string) byte {
 	return addr[3]
 }
 
-func CompareIPAddr(MyIP string, Peers []string) bool {
+func IsMaster(MyIP string, Peers []string) bool {
 	if len(Peers) == 0 {
-		Peers = append(Peers, MyIP)
+		return true
 	}
 	lowestIP := Peers[0]
 	for _, ip := range Peers {
@@ -175,8 +175,4 @@ func CompareIPAddr(MyIP string, Peers []string) bool {
 	v := myIP[3] <= lowestIP[3]
 	fmt.Printf("Am I master: %v\n", v)*/
 	return myIP[3] <= lowestIP[3]
-}
-
-func IsMaster(MyIP string, Peers []string) bool {
-	return CompareIPAddr(MyIP, Peers)
 }

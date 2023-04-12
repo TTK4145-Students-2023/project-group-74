@@ -12,8 +12,8 @@ func OrderAssigner(
 	RxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
 	RxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
 	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
-	TxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
-	RxNewOrdersChan chan<- map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool,
+	TxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
+	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
 	TxHRAInputChan <-chan localTypes.HRAInput,
 ) {
 
@@ -43,7 +43,7 @@ func OrderAssigner(
 				/*for k, v := range newOrders {
 					fmt.Printf("New Orders: %s: %v\n", k, v)
 				}*/
-				//RxNewOrdersChan <- newOrders
+				RxNewOrdersChan <- newOrders
 				TxNewOrdersChan <- newOrders
 			}
 
@@ -60,7 +60,7 @@ func OrderAssigner(
 					for k, v := range newOrders {
 						fmt.Printf("New Orders: %s: %v\n", k, v)
 					}
-					//RxNewOrdersChan <- newOrders
+					RxNewOrdersChan <- newOrders
 					TxNewOrdersChan <- newOrders
 
 				}
@@ -79,7 +79,7 @@ func OrderAssigner(
 				for k, v := range newOrders {
 					fmt.Printf("New Orders: %s: %v\n", k, v)
 				}
-				//RxNewOrdersChan <- newOrders
+				RxNewOrdersChan <- newOrders
 				TxNewOrdersChan <- newOrders
 
 			}

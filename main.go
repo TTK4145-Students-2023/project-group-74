@@ -6,31 +6,34 @@ import (
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
 	"project-group-74/network"
+	"project-group-74/network/subs/localip"
 )
 
 func main() {
 
-	TxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO)
-	RxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO)
+	TxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO, 10)
+	RxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO, 10)
 
-	TxNewHallRequestChan := make(chan localTypes.BUTTON_INFO)
-	RxNewHallRequestChan := make(chan localTypes.BUTTON_INFO)
+	TxNewHallRequestChan := make(chan localTypes.BUTTON_INFO, 10)
+	RxNewHallRequestChan := make(chan localTypes.BUTTON_INFO, 10)
 
-	TxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO)
-	RxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO)
+	TxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO, 10)
+	RxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO, 10)
 
-	TxNewOrdersChan := make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
-	RxNewOrdersChan := make(chan map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool)
+	TxNewOrdersChan := make(chan map[string]localTypes.HMATRIX, 10)
+	RxNewOrdersChan := make(chan map[string]localTypes.HMATRIX, 10)
 
-	TxP2PElevInfoChan := make(chan localTypes.P2P_ELEV_INFO)
-	RxP2PElevInfoChan := make(chan localTypes.P2P_ELEV_INFO)
+	TxP2PElevInfoChan := make(chan localTypes.P2P_ELEV_INFO, 10)
+	RxP2PElevInfoChan := make(chan localTypes.P2P_ELEV_INFO, 10)
 
-	NewBtnPressChan := make(chan localTypes.BUTTON_INFO)
-	NewFloorChan := make(chan int)
+	NewBtnPressChan := make(chan localTypes.BUTTON_INFO, 10)
+	NewFloorChan := make(chan int, 10)
 
-	TxHRAInputChan := make(chan localTypes.HRAInput)
+	TxHRAInputChan := make(chan localTypes.HRAInput, 10)
 
 	elevio.Init("localhost:15657", localTypes.NUM_FLOORS)
+
+	myIP, _ := localip.LocalIP()
 
 	go network.P2Pnet(
 		TxElevInfoChan,
@@ -44,7 +47,7 @@ func main() {
 		TxP2PElevInfoChan,
 		RxP2PElevInfoChan)
 
-	go elev_control.RunElevator(
+	go elev_control.RunElevator(myIP,
 		TxElevInfoChan,
 		RxElevInfoChan,
 		TxNewHallRequestChan,
