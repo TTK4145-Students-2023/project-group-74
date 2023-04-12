@@ -57,29 +57,29 @@ func RunElevator(
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			TxP2PElevInfoChan <- ForeignElevs
 			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+			MyElev.Direction, MyElev.State = newDir, newState
+			elevio.SetMotorDirection(newDir)
 
-			if newState==localTypes.Door_open {
-				MyElev.CabCalls[MyElev.Floor]=false
+			if newState == localTypes.Door_open {
+				MyElev.CabCalls[MyElev.Floor] = false
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-				
-				
-
+				if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						fmt.Printf("LE:finished hall order\n")
-						RxFinishedHallOrderChan <- finishedOrder
+						RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
 					} else {
-						TxFinishedHallOrderChan <- finishedOrder
+						TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+					}
+				} else if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
+						RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+					} else {
+						TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 					}
 				}
-				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait, wait for them to press cab etc
+				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait
 			}
-
-			MyElev.Direction = newDir
-			MyElev.State = newState
-			elevio.SetMotorDirection(newDir)
 			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 				RxElevInfoChan <- MyElev
-				fmt.Printf("LE:Respond to new orders\n")
 			} else {
 				TxElevInfoChan <- MyElev
 			}
@@ -90,24 +90,45 @@ func RunElevator(
 			MyElev.Floor = newFloor
 
 			if elevio.IsOrderAtFloor(MyElev, MyOrders) {
-				finishedOrder := elevio.GetFinOrder(newFloor, MyElev.Direction)
-				if finishedOrder.Button == localTypes.Button_Cab {
-					MyElev.CabCalls = elevio.RemoveOneOrderBtn(finishedOrder, MyElev)
-					elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-					fmt.Printf("LE:finished cab order\n")
-
-				} else {
-
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						fmt.Printf("LE:finished hall order\n")
-						RxFinishedHallOrderChan <- finishedOrder
+				MyElev.CabCalls[MyElev.Floor] = false
+				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+				var completedorder localTypes.BUTTON_INFO
+				var changed bool
+				switch MyElev.Direction {
+				case localTypes.DIR_up:
+					if elevio.Requests_above(MyElev, MyOrders) {
+						if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
+							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+							changed = true
+						}
 					} else {
-						TxFinishedHallOrderChan <- finishedOrder
+						if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
+							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+							changed = true
+						}
+					}
+				case localTypes.DIR_down:
+					if elevio.Requests_below(MyElev, MyOrders) {
+						if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
+							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+							changed = true
+						}
+					} else {
+						if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
+							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+							changed = true
+						}
+					}
+				}
+				if changed == true {
+					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
+						RxFinishedHallOrderChan <- completedorder
+					} else {
+						TxFinishedHallOrderChan <- completedorder
 					}
 				}
 				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait, wait for them to press cab etc
 			}
-
 			fmt.Printf("  redeciding locally-newfloor\n")
 			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
 			MyElev.Direction = newDir
