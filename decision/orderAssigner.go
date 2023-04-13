@@ -43,8 +43,11 @@ func OrderAssigner(
 				/*for k, v := range newOrders {
 					fmt.Printf("New Orders: %s: %v\n", k, v)
 				}*/
-				RxNewOrdersChan <- newOrders
-				TxNewOrdersChan <- newOrders
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxNewOrdersChan <- newOrders
+				} else {
+					TxNewOrdersChan <- newOrders
+				}
 			}
 
 		case newHRequest := <-RxNewHallRequestChan:
@@ -60,9 +63,11 @@ func OrderAssigner(
 					for k, v := range newOrders {
 						fmt.Printf("New Orders: %s: %v\n", k, v)
 					}
-					RxNewOrdersChan <- newOrders
-					TxNewOrdersChan <- newOrders
-
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxNewOrdersChan <- newOrders
+					} else {
+						TxNewOrdersChan <- newOrders
+					}
 				}
 
 			}
@@ -79,9 +84,11 @@ func OrderAssigner(
 				for k, v := range newOrders {
 					fmt.Printf("New Orders: %s: %v\n", k, v)
 				}
-				RxNewOrdersChan <- newOrders
-				TxNewOrdersChan <- newOrders
-
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxNewOrdersChan <- newOrders
+				} else {
+					TxNewOrdersChan <- newOrders
+				}
 			}
 
 		default:

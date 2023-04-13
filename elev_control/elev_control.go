@@ -17,8 +17,9 @@ func RunElevator(myIP string,
 	RxNewOrdersChan <-chan map[string]localTypes.HMATRIX,
 	TxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO,
 	RxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
-	NewFloorChan chan int,
-	NewBtnPressChan <-chan localTypes.BUTTON_INFO) {
+	NewFloorChan <-chan int,
+	NewBtnPressChan <-chan localTypes.BUTTON_INFO,
+	ObstructionChan <-chan bool) {
 
 	MyElev :=
 		localTypes.LOCAL_ELEVATOR_INFO{
@@ -29,7 +30,6 @@ func RunElevator(myIP string,
 			ElevID:    myIP,
 		}
 
-	//MyElevPtr := &MyElev Remove pointers
 	initializing := true
 
 	for initializing {
@@ -53,128 +53,164 @@ func RunElevator(myIP string,
 	var MyOrders localTypes.HMATRIX        // FOR DRIVING combined with myCabCalls
 	var CombinedHMatrix localTypes.HMATRIX // FOR LIGHTS and reboot if you become master
 	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
-	fmt.Printf("LE:innit\n")
 
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+
+	var dooropentimer *time.Timer
+	dooropentimer = time.NewTimer(time.Second * 1000)
 
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
-			MyOrders = newOrder[myIP]
+			if MyOrders != newOrder[MyElev.ElevID] {
+				MyOrders = newOrder[MyElev.ElevID]
+			}
 
-			for _, orders := range newOrder {
-				for floor, buttons := range orders {
-					for button, val := range buttons {
-						CombinedHMatrix[floor][button] = CombinedHMatrix[floor][button] || val
+			switch MyElev.State {
+			case localTypes.Door_open:
+
+			case localTypes.Moving:
+			case localTypes.Idle:
+				if elevio.IsOrderAtFloor(MyElev, MyOrders) {
+					MyElev.CabCalls[MyElev.Floor] = false
+					if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
+						if len(localTypes.PeerList.Peers) == 0 {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+						} else {
+							TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+						}
+					} else if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
+						if len(localTypes.PeerList.Peers) == 0 {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+						} else {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+						}
+					}
+					MyElev.State = localTypes.Door_open
+					elevio.SetDoorOpenLamp(true)
+					fmt.Printf("Dooropen from neworder\n")
+					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxElevInfoChan <- MyElev
+					} else {
+						TxElevInfoChan <- MyElev
+					}
+				} else {
+					newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+					MyElev.Direction, MyElev.State = newDir, newState
+					elevio.SetMotorDirection(newDir)
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxElevInfoChan <- MyElev
+					} else {
+						TxElevInfoChan <- MyElev
 					}
 				}
+			}
+		case newFloor := <-NewFloorChan:
+			if MyElev.Floor != newFloor {
+				MyElev.Floor = newFloor
+				elevio.SetFloorIndicator(newFloor)
+			}
+			switch true {
+			case MyElev.Direction == localTypes.DIR_up && MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
+				MyElev.CabCalls[MyElev.Floor] = false
+				MyElev.Direction = localTypes.DIR_stop
+				MyElev.State = localTypes.Door_open
+				elevio.SetMotorDirection(localTypes.DIR_stop)
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+				} else {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+				}
+
+			case MyElev.Direction == localTypes.DIR_up && elevio.Requests_above(MyElev, MyOrders):
+
+			case MyElev.Direction == localTypes.DIR_up && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
+				MyElev.CabCalls[MyElev.Floor] = false
+				MyElev.Direction = localTypes.DIR_stop
+				MyElev.State = localTypes.Door_open
+				elevio.SetMotorDirection(localTypes.DIR_stop)
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+				} else {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+				}
+
+			case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
+				MyElev.CabCalls[MyElev.Floor] = false
+				MyElev.Direction = localTypes.DIR_stop
+				MyElev.State = localTypes.Door_open
+				elevio.SetMotorDirection(localTypes.DIR_stop)
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+				} else {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+				}
+
+			case MyElev.Direction == localTypes.DIR_down && elevio.Requests_below(MyElev, MyOrders):
+
+			case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
+				MyElev.CabCalls[MyElev.Floor] = false
+				MyElev.Direction = localTypes.DIR_stop
+				MyElev.State = localTypes.Door_open
+				elevio.SetMotorDirection(localTypes.DIR_stop)
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+				} else {
+					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+				}
+
+			case MyElev.CabCalls[MyElev.Floor]:
+				MyElev.CabCalls[MyElev.Floor] = false
+				MyElev.Direction = localTypes.DIR_stop
+				MyElev.State = localTypes.Door_open
+				elevio.SetMotorDirection(localTypes.DIR_stop)
+
+			default:
+				MyElev.Direction = localTypes.DIR_stop
+				MyElev.State = localTypes.Idle
+				elevio.SetMotorDirection(localTypes.DIR_stop)
 			}
 
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-			TxP2PElevInfoChan <- AllElevs
-			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
-			MyElev.Direction, MyElev.State = newDir, newState
-			elevio.SetMotorDirection(newDir)
-
-			if newState == localTypes.Door_open {
-				MyElev.CabCalls[MyElev.Floor] = false
-				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-				if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-					} else {
-						TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-					}
-				} else if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-					} else {
-						TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-					}
-				}
-				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait
-			}
-			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-				RxElevInfoChan <- MyElev
-			} else {
-				TxElevInfoChan <- MyElev
-			}
-
-		case newFloor := <-NewFloorChan:
-			fmt.Printf("LE:NewFLoorProc\n")
-			elevio.SetFloorIndicator(newFloor)
-			MyElev.Floor = newFloor
-
-			if elevio.IsOrderAtFloor(MyElev, MyOrders) {
-				MyElev.CabCalls[MyElev.Floor] = false
-				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-				var completedorder localTypes.BUTTON_INFO
-				var changed bool
-				switch MyElev.Direction {
-				case localTypes.DIR_up:
-					if elevio.Requests_above(MyElev, MyOrders) {
-						if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
-							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-							changed = true
-						}
-					} else {
-						if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
-							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-							changed = true
-						}
-					}
-				case localTypes.DIR_down:
-					if elevio.Requests_below(MyElev, MyOrders) {
-						if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
-							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-							changed = true
-						}
-					} else {
-						if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
-							completedorder = localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-							changed = true
-						}
-					}
-				}
-				if changed {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						RxFinishedHallOrderChan <- completedorder
-					} else {
-						TxFinishedHallOrderChan <- completedorder
-					}
-				}
-				MyElev = elevio.ArrivedAtOrder(MyElev) //Opendoors, wait, wait for them to press cab etc
-			}
-			fmt.Printf("  redeciding locally-newfloor\n")
-			newDir, newState := elevio.FindDirection(MyElev, MyOrders)
-			MyElev.Direction = newDir
-			MyElev.State = newState
-			elevio.SetMotorDirection(newDir)
-			if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
+			if len(localTypes.PeerList.Peers) == 0 {
 				RxElevInfoChan <- MyElev
 			} else {
 				TxElevInfoChan <- MyElev
 			}
 
 		case newBtnPress := <-NewBtnPressChan:
-			fmt.Printf("LE:NewBTNProc\n")
-
-			if newBtnPress.Button == localTypes.Button_Cab {
-				fmt.Printf("Run Elevator: new cab request!\n")
+			switch newBtnPress.Button {
+			case localTypes.Button_Cab:
 				MyElev.CabCalls = elevio.AddOneNewOrderBtn(newBtnPress, MyElev)
 				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-				newDir, newState := elevio.FindDirection(MyElev, MyOrders)
-				MyElev.Direction = newDir
-				MyElev.State = newState
-				elevio.SetMotorDirection(newDir)
-				if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-					RxElevInfoChan <- MyElev
-				} else {
-					TxElevInfoChan <- MyElev
-				}
-			} else {
-				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
+				switch MyElev.State {
+				case localTypes.Moving:
+				case localTypes.Door_open:
+					if newBtnPress.Floor == MyElev.Floor {
+						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
+						dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+					}
 
+				case localTypes.Idle:
+					newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+					MyElev.Direction = newDir
+					MyElev.State = newState
+					elevio.SetMotorDirection(newDir)
+					if newState == localTypes.Door_open {
+						elevio.SetDoorOpenLamp(true)
+						fmt.Printf("Dooropen from nebtnpress\n")
+
+						dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+					}
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxElevInfoChan <- MyElev
+					} else {
+						TxElevInfoChan <- MyElev
+					}
+				}
+			case localTypes.Button_hall_up, localTypes.Button_hall_down:
+				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
 					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
 						fmt.Printf("Run Elevator: new hall request!\n")
 
@@ -182,14 +218,37 @@ func RunElevator(myIP string,
 					} else {
 						TxNewHallRequestChan <- newBtnPress
 					}
+				}
+			}
 
+		case <-ObstructionChan:
+			if MyElev.State == localTypes.Door_open {
+				dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+			}
+
+		case dooropen := <-dooropentimer.C:
+			fmt.Printf("dooropentimerproc%b \n", dooropen)
+			if MyElev.State == localTypes.Door_open {
+				elevio.SetDoorOpenLamp(false)
+				newDir, newState := elevio.FindDirection(MyElev, MyOrders)
+				MyElev.Direction = newDir
+				MyElev.State = newState
+				elevio.SetMotorDirection(newDir)
+				if newState == localTypes.Door_open {
+					fmt.Printf("Run Elevator: dooropen LOOPING!\n")
+
+					elevio.SetDoorOpenLamp(true)
+					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+				}
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxElevInfoChan <- MyElev
+				} else {
+					TxElevInfoChan <- MyElev
 				}
 			}
 
 		case AllElevs = <-RxP2PElevInfoChan:
-			fmt.Printf("LE:Newp2pelev\n")
-
-
+			fmt.Printf("LE:innitALLELEVS\n")
 			AllElevs = elevio.AddLocalToForeignInfo(MyElev, AllElevs)
 			TxP2PElevInfoChan <- AllElevs
 		}

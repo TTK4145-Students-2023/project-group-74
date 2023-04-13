@@ -28,6 +28,7 @@ func main() {
 
 	NewBtnPressChan := make(chan localTypes.BUTTON_INFO, 10)
 	NewFloorChan := make(chan int, 10)
+	ObstructionChan := make(chan bool, 10)
 
 	TxHRAInputChan := make(chan localTypes.HRAInput, 10)
 
@@ -58,7 +59,9 @@ func main() {
 		TxP2PElevInfoChan,
 		RxP2PElevInfoChan,
 		NewFloorChan,
-		NewBtnPressChan)
+		NewBtnPressChan,
+		ObstructionChan,
+	)
 
 	go decision.OrderAssigner(
 		RxElevInfoChan,
@@ -70,6 +73,7 @@ func main() {
 
 	go elevio.PollButtons(NewBtnPressChan)
 	go elevio.PollFloorSensor(NewFloorChan)
+	go elevio.PollObstructionSwitch(ObstructionChan)
 
 	select {}
 
