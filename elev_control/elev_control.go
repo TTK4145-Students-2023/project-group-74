@@ -188,7 +188,10 @@ func RunElevator(myIP string,
 				case localTypes.Moving:
 				case localTypes.Door_open:
 					if newBtnPress.Floor == MyElev.Floor {
+
 						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
+						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+
 						dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 					}
 
@@ -199,7 +202,8 @@ func RunElevator(myIP string,
 					elevio.SetMotorDirection(newDir)
 					if newState == localTypes.Door_open {
 						elevio.SetDoorOpenLamp(true)
-						fmt.Printf("Dooropen from nebtnpress\n")
+						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
+						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
 						dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 					}
@@ -226,8 +230,8 @@ func RunElevator(myIP string,
 				dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 			}
 
-		case dooropen := <-dooropentimer.C:
-			fmt.Printf("dooropentimerproc%b \n", dooropen)
+		case <-dooropentimer.C:
+
 			if MyElev.State == localTypes.Door_open {
 				elevio.SetDoorOpenLamp(false)
 				newDir, newState := elevio.FindDirection(MyElev, MyOrders)
@@ -236,6 +240,7 @@ func RunElevator(myIP string,
 				elevio.SetMotorDirection(newDir)
 				if newState == localTypes.Door_open {
 					fmt.Printf("Run Elevator: dooropen LOOPING!\n")
+					fmt.Print("LOOPING ORDER %b", MyElev.CabCalls[MyElev.Floor])
 
 					elevio.SetDoorOpenLamp(true)
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
