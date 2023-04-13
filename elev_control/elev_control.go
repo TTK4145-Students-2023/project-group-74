@@ -64,11 +64,18 @@ func RunElevator(myIP string,
 		case newOrder := <-RxNewOrdersChan:
 			if MyOrders != newOrder[MyElev.ElevID] {
 				MyOrders = newOrder[MyElev.ElevID]
+
+			}
+			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
+			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+			for floor := 0; floor < 4; floor++ {
+				for button := 0; button < 2; button++ {
+					fmt.Printf("HMATRIX[%d][%d] = %t\n", floor, button, MyOrders[floor][button])
+				}
 			}
 
 			switch MyElev.State {
 			case localTypes.Door_open:
-
 			case localTypes.Moving:
 			case localTypes.Idle:
 				if elevio.IsOrderAtFloor(MyElev, MyOrders) {
@@ -76,15 +83,23 @@ func RunElevator(myIP string,
 					if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
 						if len(localTypes.PeerList.Peers) == 0 {
 							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+							fmt.Printf("finishedhcall7\n")
+
 						} else {
 							TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+							fmt.Printf("finishedhcal66l\n")
+
 						}
+						fmt.Printf("finishedhcall5\n")
+
 					} else if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
 						if len(localTypes.PeerList.Peers) == 0 {
 							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 						} else {
-							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+							TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 						}
+						fmt.Printf("finishedhcall6\n")
+
 					}
 					MyElev.State = localTypes.Door_open
 					elevio.SetDoorOpenLamp(true)
@@ -120,8 +135,9 @@ func RunElevator(myIP string,
 				if len(localTypes.PeerList.Peers) == 0 {
 					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
 				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+					TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
 				}
+				fmt.Printf("finishedhcall3\n")
 
 			case MyElev.Direction == localTypes.DIR_up && elevio.Requests_above(MyElev, MyOrders):
 
@@ -133,8 +149,9 @@ func RunElevator(myIP string,
 				if len(localTypes.PeerList.Peers) == 0 {
 					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+					TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 				}
+				fmt.Printf("finishedhcall2\n")
 
 			case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
 				MyElev.CabCalls[MyElev.Floor] = false
@@ -144,8 +161,9 @@ func RunElevator(myIP string,
 				if len(localTypes.PeerList.Peers) == 0 {
 					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+					TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
 				}
+				fmt.Printf("finishedhcall1\n")
 
 			case MyElev.Direction == localTypes.DIR_down && elevio.Requests_below(MyElev, MyOrders):
 
@@ -157,11 +175,20 @@ func RunElevator(myIP string,
 				if len(localTypes.PeerList.Peers) == 0 {
 					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
 				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+					TxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
 				}
+				fmt.Printf("finishedhcall4\n")
 
 			case MyElev.CabCalls[MyElev.Floor]:
 				MyElev.CabCalls[MyElev.Floor] = false
+
+				elevio.SetDoorOpenLamp(true)
+
+				elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+				fmt.Printf("newcabpress idle\n")
+
+				dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+
 				MyElev.Direction = localTypes.DIR_stop
 				MyElev.State = localTypes.Door_open
 				elevio.SetMotorDirection(localTypes.DIR_stop)
@@ -188,10 +215,9 @@ func RunElevator(myIP string,
 				case localTypes.Moving:
 				case localTypes.Door_open:
 					if newBtnPress.Floor == MyElev.Floor {
-
 						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
 						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-
+						fmt.Printf("newcabpress door  open\n")
 						dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 					}
 
@@ -204,6 +230,7 @@ func RunElevator(myIP string,
 						elevio.SetDoorOpenLamp(true)
 						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
 						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+						fmt.Printf("newcabpress idle\n")
 
 						dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 					}
@@ -240,7 +267,6 @@ func RunElevator(myIP string,
 				elevio.SetMotorDirection(newDir)
 				if newState == localTypes.Door_open {
 					fmt.Printf("Run Elevator: dooropen LOOPING!\n")
-					fmt.Print("LOOPING ORDER %b", MyElev.CabCalls[MyElev.Floor])
 
 					elevio.SetDoorOpenLamp(true)
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)

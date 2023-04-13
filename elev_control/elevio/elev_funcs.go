@@ -174,7 +174,7 @@ func AddNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX,
 	return MyOrders
 }
 
-func AddNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
+func AddNewOrdersToHMatrix(newOrder map[string]localTypes.HMATRIX) localTypes.HMATRIX {
 	var CombinedHMatrix localTypes.HMATRIX
 	for ID := range newOrder {
 		for f := 0; f < localTypes.NUM_FLOORS; f++ {

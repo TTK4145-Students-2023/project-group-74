@@ -41,7 +41,7 @@ type BUTTON_INFO struct {
 }
 
 type HMATRIX [NUM_FLOORS][NUM_BUTTONS - 1]bool
-type ORDER map[string][NUM_FLOORS][NUM_BUTTONS - 1]bool
+type ORDER map[string]HMATRIX 
 type P2P_ELEV_INFO []LOCAL_ELEVATOR_INFO
 
 type FOREIGN_ORDER_TYPE struct {
@@ -62,7 +62,7 @@ type LOCAL_ELEVATOR_INFO struct {
 	Floor     int
 	Direction MOTOR_DIR
 	State     ELEVATOR_STATE
-	CabCalls  [NUM_FLOORS]bool
+	CabCalls  [NUM_FLOORS]bool 
 	ElevID    string
 }
 
@@ -84,7 +84,7 @@ type HRAElevState struct {
 }
 
 type HRAInput struct {
-	HallRequests [NUM_FLOORS][2]bool     `json:"hallRequests"`
+	HallRequests [NUM_FLOORS][2]bool      `json:"hallRequests"`
 	States       map[string]HRAElevState `json:"states"`
 }
 
