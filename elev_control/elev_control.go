@@ -71,7 +71,7 @@ func RunElevator(myIP string,
 			if MyOrders != newOrder[MyElev.ElevID] {
 				MyOrders = newOrder[MyElev.ElevID]
 			}
-			fmt.Printf("Myorders %+v", MyOrders)
+			fmt.Printf("Myorders %+v\n", MyOrders)
 			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
@@ -82,10 +82,10 @@ func RunElevator(myIP string,
 				if elevio.IsOrderAtFloor(MyElev, MyOrders) {
 					MyElev.CabCalls[MyElev.Floor] = false
 					if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
-						localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, RxFinishedHallOrderChan) //change to TX
+						localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan) //change to TX
 
 					} else if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
-						localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, RxFinishedHallOrderChan) //change to TX
+						localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan) //change to TX
 
 					}
 					MyElev.State = localTypes.Door_open
@@ -122,7 +122,7 @@ func RunElevator(myIP string,
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, RxFinishedHallOrderChan) //change to TX
+					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan) //change to TX
 
 				case elevio.Requests_above(MyElev, MyOrders):
 					fmt.Printf("Drive By shooting\n")
@@ -130,7 +130,7 @@ func RunElevator(myIP string,
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, RxFinishedHallOrderChan) //change to TX
+					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan) //change to TX
 				default:
 					MyElev.State, MyElev.Direction = localTypes.Idle, localTypes.DIR_stop
 					elevio.SetMotorDirection(MyElev.Direction)
@@ -140,14 +140,14 @@ func RunElevator(myIP string,
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, RxFinishedHallOrderChan) //change to TX
+					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan) //change to TX
 
 				case elevio.Requests_below(MyElev, MyOrders):
 
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, RxFinishedHallOrderChan) //change to TX
+					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan) //change to TX
 				default:
 					MyElev.State, MyElev.Direction = localTypes.Idle, localTypes.DIR_stop
 					elevio.SetMotorDirection(MyElev.Direction)
@@ -191,33 +191,28 @@ func RunElevator(myIP string,
 
 						dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 					}
-					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, RxElevInfoChan) //Change to TX
+					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan) //Change to TX
 				}
 			case localTypes.Button_hall_up:
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						fmt.Printf("Run Elevator: new hall request!\n")
+					localTypes.SendButtonInfo(MyElev, newBtnPress.Button, RxNewHallRequestChan, TxNewHallRequestChan) //change to TX
 
-						RxNewHallRequestChan <- newBtnPress
-					} else {
-						RxNewHallRequestChan <- newBtnPress
-					}
 				}
 			case localTypes.Button_hall_down:
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					if localTypes.IsMaster(MyElev.ElevID, localTypes.PeerList.Peers) {
-						fmt.Printf("Run Elevator: new hall request!\n")
-
-						RxNewHallRequestChan <- newBtnPress
-					} else {
-						RxNewHallRequestChan <- newBtnPress
-					}
+					localTypes.SendButtonInfo(MyElev, newBtnPress.Button, RxNewHallRequestChan, TxNewHallRequestChan) //change to TX
 				}
 			}
 
-		case <-ObstructionChan:
+		case obstruction := <-ObstructionChan:
+			if obstruction {
+				dooropentimer.Stop()
+			}
 			if MyElev.State == localTypes.Door_open {
-				dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+				if !obstruction {
+					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+				}
+
 			}
 
 		case <-dooropentimer.C:
@@ -226,14 +221,13 @@ func RunElevator(myIP string,
 			newDir, newState := elevio.FindDirection2(MyElev, MyOrders)
 			MyElev.Direction = newDir
 			MyElev.State = newState
-			fmt.Printf("Open_door new State: %v\n", MyElev.State)
 			elevio.SetMotorDirection(newDir)
 			if newState == localTypes.Door_open {
 				fmt.Printf("Run Elevator: dooropen LOOPING!\n")
 				elevio.SetDoorOpenLamp(true)
 				dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 			}
-			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, RxElevInfoChan)
+			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
 		case AllElevs = <-RxP2PElevInfoChan:
 			fmt.Printf("LE:innitALLELEVS\n")
