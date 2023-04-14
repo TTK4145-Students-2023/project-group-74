@@ -61,6 +61,14 @@ func RunElevator(myIP string,
 
 	for {
 		select {
+		// case newCabCalls := <- CabCallsChan:
+		// 	MyElev.CabCalls = newCabCalls
+		// 	switch MyElev.State{
+		// 	case localTypes.Idle:
+		// 	case localTypes.Moving:
+		// 	case localTypes.Door_open:
+
+		// 	}
 		case newOrder := <-RxNewOrdersChan:
 			if MyOrders != newOrder[MyElev.ElevID] {
 				MyOrders = newOrder[MyElev.ElevID]
@@ -68,7 +76,6 @@ func RunElevator(myIP string,
 
 			switch MyElev.State {
 			case localTypes.Door_open:
-
 			case localTypes.Moving:
 			case localTypes.Idle:
 				if elevio.IsOrderAtFloor(MyElev, MyOrders) {
@@ -109,75 +116,130 @@ func RunElevator(myIP string,
 		case newFloor := <-NewFloorChan:
 			if MyElev.Floor != newFloor {
 				MyElev.Floor = newFloor
-				elevio.SetFloorIndicator(newFloor)
+				elevio.SetFloorIndicator(MyElev.Floor)
 			}
-			switch true {
-			case MyElev.Direction == localTypes.DIR_up && MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
-				MyElev.CabCalls[MyElev.Floor] = false
-				MyElev.Direction = localTypes.DIR_stop
-				MyElev.State = localTypes.Door_open
-				elevio.SetMotorDirection(localTypes.DIR_stop)
-				if len(localTypes.PeerList.Peers) == 0 {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			switch MyElev.Direction {
+			case localTypes.DIR_stop:
+			case localTypes.DIR_up:
+				switch {
+				case MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
+					elevio.SetMotorDirection(localTypes.DIR_stop)
+					MyElev.Direction = localTypes.DIR_stop
+					MyElev.State = localTypes.Door_open
+					MyElev.CabCalls[MyElev.Floor] = false
+
+					if len(localTypes.PeerList.Peers) == 0 {
+			 			RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			 		} else {
+			 			RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			 		}
+				case MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
+					elevio.SetMotorDirection(localTypes.DIR_stop)
+					MyElev.Direction = localTypes.DIR_stop
+					MyElev.State = localTypes.Door_open
+					MyElev.CabCalls[MyElev.Floor] = false
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+					} else {
+						RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+					}
+				case elevio.Requests_above(MyElev, MyOrders):
 				}
+			case localTypes.DIR_down:
+				switch {
+					case MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
+						elevio.SetMotorDirection(localTypes.DIR_stop)
+						MyElev.Direction = localTypes.DIR_stop
+						MyElev.State = localTypes.Door_open
+						MyElev.CabCalls[MyElev.Floor] = false
 
-			case MyElev.Direction == localTypes.DIR_up && elevio.Requests_above(MyElev, MyOrders):
+						if len(localTypes.PeerList.Peers) == 0 {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+						} else {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+						}
+					case MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
+						elevio.SetMotorDirection(localTypes.DIR_stop)
+						MyElev.Direction = localTypes.DIR_stop
+						MyElev.State = localTypes.Door_open
+						MyElev.CabCalls[MyElev.Floor] = false
 
-			case MyElev.Direction == localTypes.DIR_up && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
-				MyElev.CabCalls[MyElev.Floor] = false
-				MyElev.Direction = localTypes.DIR_stop
-				MyElev.State = localTypes.Door_open
-				elevio.SetMotorDirection(localTypes.DIR_stop)
-				if len(localTypes.PeerList.Peers) == 0 {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+						if len(localTypes.PeerList.Peers) == 0 {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+						} else {
+							RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+						}
+					case elevio.Requests_below(MyElev, MyOrders):
 				}
-
-			case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
-				MyElev.CabCalls[MyElev.Floor] = false
-				MyElev.Direction = localTypes.DIR_stop
-				MyElev.State = localTypes.Door_open
-				elevio.SetMotorDirection(localTypes.DIR_stop)
-				if len(localTypes.PeerList.Peers) == 0 {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
-				}
-
-			case MyElev.Direction == localTypes.DIR_down && elevio.Requests_below(MyElev, MyOrders):
-
-			case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
-				MyElev.CabCalls[MyElev.Floor] = false
-				MyElev.Direction = localTypes.DIR_stop
-				MyElev.State = localTypes.Door_open
-				elevio.SetMotorDirection(localTypes.DIR_stop)
-				if len(localTypes.PeerList.Peers) == 0 {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-				} else {
-					RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
-				}
-
-			case MyElev.CabCalls[MyElev.Floor]:
-				MyElev.CabCalls[MyElev.Floor] = false
-				MyElev.Direction = localTypes.DIR_stop
-				MyElev.State = localTypes.Door_open
-				elevio.SetMotorDirection(localTypes.DIR_stop)
-
-			default:
-				MyElev.Direction = localTypes.DIR_stop
-				MyElev.State = localTypes.Idle
-				elevio.SetMotorDirection(localTypes.DIR_stop)
 			}
 
-			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-			if len(localTypes.PeerList.Peers) == 0 {
-				RxElevInfoChan <- MyElev
-			} else {
-				TxElevInfoChan <- MyElev
-			}
+			// switch true {
+			// case MyElev.Direction == localTypes.DIR_up && MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
+			// 	MyElev.CabCalls[MyElev.Floor] = false
+			// 	MyElev.Direction = localTypes.DIR_stop
+			// 	MyElev.State = localTypes.Door_open
+			// 	elevio.SetMotorDirection(localTypes.DIR_stop)
+			// 	if len(localTypes.PeerList.Peers) == 0 {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			// 	} else {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			// 	}
+
+			// case MyElev.Direction == localTypes.DIR_up && elevio.Requests_above(MyElev, MyOrders):
+
+			// case MyElev.Direction == localTypes.DIR_up && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
+			// 	MyElev.CabCalls[MyElev.Floor] = false
+			// 	MyElev.Direction = localTypes.DIR_stop
+			// 	MyElev.State = localTypes.Door_open
+			// 	elevio.SetMotorDirection(localTypes.DIR_stop)
+			// 	if len(localTypes.PeerList.Peers) == 0 {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+			// 	} else {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+			// 	}
+
+			// case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
+			// 	MyElev.CabCalls[MyElev.Floor] = false
+			// 	MyElev.Direction = localTypes.DIR_stop
+			// 	MyElev.State = localTypes.Door_open
+			// 	elevio.SetMotorDirection(localTypes.DIR_stop)
+			// 	if len(localTypes.PeerList.Peers) == 0 {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+			// 	} else {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_down}
+			// 	}
+
+			// case MyElev.Direction == localTypes.DIR_down && elevio.Requests_below(MyElev, MyOrders):
+
+			// case MyElev.Direction == localTypes.DIR_down && MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
+			// 	MyElev.CabCalls[MyElev.Floor] = false
+			// 	MyElev.Direction = localTypes.DIR_stop
+			// 	MyElev.State = localTypes.Door_open
+			// 	elevio.SetMotorDirection(localTypes.DIR_stop)
+			// 	if len(localTypes.PeerList.Peers) == 0 {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			// 	} else {
+			// 		RxFinishedHallOrderChan <- localTypes.BUTTON_INFO{Floor: MyElev.Floor, Button: localTypes.Button_hall_up}
+			// 	}
+
+			// case MyElev.CabCalls[MyElev.Floor]:
+			// 	MyElev.CabCalls[MyElev.Floor] = false
+			// 	MyElev.Direction = localTypes.DIR_stop
+			// 	MyElev.State = localTypes.Door_open
+			// 	elevio.SetMotorDirection(localTypes.DIR_stop)
+
+			// default:
+			// 	MyElev.Direction = localTypes.DIR_stop
+			// 	MyElev.State = localTypes.Idle
+			// 	elevio.SetMotorDirection(localTypes.DIR_stop)
+			// }
+
+			// elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+			// if len(localTypes.PeerList.Peers) == 0 {
+			// 	RxElevInfoChan <- MyElev
+			// } else {
+			// 	TxElevInfoChan <- MyElev
+			// }
 
 		case newBtnPress := <-NewBtnPressChan:
 			switch newBtnPress.Button {
@@ -220,7 +282,7 @@ func RunElevator(myIP string,
 
 						RxNewHallRequestChan <- newBtnPress
 					} else {
-						TxNewHallRequestChan <- newBtnPress
+						RxNewHallRequestChan <- newBtnPress
 					}
 				}
 			}
@@ -240,7 +302,7 @@ func RunElevator(myIP string,
 				elevio.SetMotorDirection(newDir)
 				if newState == localTypes.Door_open {
 					fmt.Printf("Run Elevator: dooropen LOOPING!\n")
-					fmt.Print("LOOPING ORDER %b", MyElev.CabCalls[MyElev.Floor])
+					fmt.Print("LOOPING ORDER %+b", MyElev.CabCalls[MyElev.Floor])
 
 					elevio.SetDoorOpenLamp(true)
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)

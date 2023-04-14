@@ -35,16 +35,11 @@ func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.H
 }
 
 func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) bool {
-	btntype := dir2Btntype(MyElev.Direction)
-
-	if btntype == localTypes.Button_Cab {
 		if MyElev.CabCalls[MyElev.Floor] || MyOrders[MyElev.Floor][localTypes.Button_hall_down] || MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
 			return true
+		}else {
+			return false
 		}
-	} else if MyElev.CabCalls[MyElev.Floor] || MyOrders[MyElev.Floor][btntype] {
-		return true
-	}
-	return false
 }
 
 func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
