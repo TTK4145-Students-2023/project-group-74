@@ -14,7 +14,11 @@ import (
 // ************ const for P2P ************
 const (
 	PeerPort      = 15699
-	StatePort     = 16599
+	Port1         = 16599
+	Port2         = 17000
+	port3         = 18000
+	port4         = 19000
+	port5         = 20000
 	BroadcastRate = 100 * time.Millisecond
 )
 
@@ -75,18 +79,18 @@ func P2Pnet(
 	go peers.Receiver(PeerPort, peerUpdateCh)
 
 	// GoRoutines to recieve from NTW
-	go bcast.Receiver(StatePort, RecieveLocalStateRx)
-	go bcast.Receiver(StatePort, RecieveNewHallReqRx)
-	go bcast.Receiver(StatePort, RecieveFinHallOrderRx)
-	go bcast.Receiver(StatePort, RecieveOrderRx)
-	go bcast.Receiver(StatePort, RecieveP2PElevInfo)
+	go bcast.Receiver(Port1, RecieveLocalStateRx)
+	go bcast.Receiver(Port2, RecieveNewHallReqRx)
+	go bcast.Receiver(port3, RecieveFinHallOrderRx)
+	go bcast.Receiver(port4, RecieveOrderRx)
+	go bcast.Receiver(port5, RecieveP2PElevInfo)
 
 	// GoRoutines to broadcast over NTW
-	go bcast.Transmitter(StatePort, BCLocalStateTx)
-	go bcast.Transmitter(StatePort, BCNewHallReqTx)
-	go bcast.Transmitter(StatePort, BCFinHallOrderTx)
-	go bcast.Transmitter(StatePort, BCNewOrderTx)
-	go bcast.Transmitter(StatePort, BCP2PElevInfoTx)
+	go bcast.Transmitter(Port1, BCLocalStateTx)
+	go bcast.Transmitter(Port2, BCNewHallReqTx)
+	go bcast.Transmitter(port3, BCFinHallOrderTx)
+	go bcast.Transmitter(port4, BCNewOrderTx)
+	go bcast.Transmitter(port5, BCP2PElevInfoTx)
 
 	// Broadcast Timer
 	broadcastTimer := time.NewTimer(BroadcastRate)
@@ -102,11 +106,17 @@ func P2Pnet(
 			localTypes.PeerList.Peers = p.Peers
 			// Broadcasting on network
 		case localState = <-TxElevInfoChan:
+			fmt.Printf("NET: Transmit local state::   %+v\n", localState)
 		case newHallReq = <-TxNewHallRequestChan:
+			fmt.Printf("NET: Transmit new hall req::   %+v\n", rxnewHallReq)
 		case finHallReq = <-TxFinishedHallOrderChan:
+			fmt.Printf("NET: Transmit finished hall order::   %+v\n", finHallReq)
 		case newOrder = <-TxNewOrdersChan:
+			fmt.Printf("NET: Transmit new order::   %+v\n", newOrder)
 		case p2pElevInfo = <-TxP2PElevInfoChan:
-		case <-broadcastTimer.C: /// 
+			fmt.Printf("NET: Transmit P2Pelevinfo::   %+v\n", p2pElevInfo)
+		case <-broadcastTimer.C:
+			fmt.Printf("NET: Broadcasting NOW\n")
 			BCLocalStateTx <- localState
 			BCNewHallReqTx <- newHallReq
 			BCFinHallOrderTx <- finHallReq
@@ -114,7 +124,6 @@ func P2Pnet(
 			BCP2PElevInfoTx <- p2pElevInfo
 			broadcastTimer.Reset(BroadcastRate)
 
-			// Reading from network
 		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
 			sort.Slice(rxP2pElevinfo, func(i, j int) bool {
 				return rxP2pElevinfo[i].ElevID < rxP2pElevinfo[j].ElevID
@@ -124,26 +133,31 @@ func P2Pnet(
 			})
 			if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {
 				rxP2pElevinfo = newrxP2pElevinfo
+				fmt.Printf("NET:P2Pelevinfo:: %+v\n", rxP2pElevinfo)
 				RxP2PElevInfoChan <- rxP2pElevinfo
 			}
 		case newrxnewHallReq := <-RecieveNewHallReqRx:
 			if rxnewHallReq != newrxnewHallReq {
 				rxnewHallReq = newrxnewHallReq
+				fmt.Printf("NET:newHallReq:: %+v\n", rxnewHallReq)
 				RxNewHallRequestChan <- rxnewHallReq
 			}
 		case newrxfinHallReq := <-RecieveFinHallOrderRx:
 			if rxfinHallReq != newrxfinHallReq {
 				rxfinHallReq = newrxfinHallReq
+				fmt.Printf("NET:FinHallReq:: %+v\n", rxfinHallReq)
 				RxFinishedHallOrderChan <- rxfinHallReq
 			}
 		case newrxLocalState := <-RecieveLocalStateRx:
 			if rxLocalState != newrxLocalState {
 				rxLocalState = newrxLocalState
+				fmt.Printf("NET:LocalState:: %+v\n", rxLocalState)
 				RxElevInfoChan <- rxLocalState
 			}
 		case newrxnewOrder := <-RecieveOrderRx:
 			if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
 				rxnewOrder = newrxnewOrder
+				fmt.Printf("NET:NewOrder:: %+v\n", rxnewOrder)
 				RxNewOrdersChan <- rxnewOrder
 			}
 		}
