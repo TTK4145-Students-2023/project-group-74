@@ -92,13 +92,13 @@ func RunElevator(myIP string,
 					elevio.SetDoorOpenLamp(true)
 					fmt.Printf("Dooropen from neworder\n")
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
-					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, RxElevInfoChan)
+					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
 				} else {
 					newDir, newState := elevio.FindDirection(MyElev, MyOrders)
 					MyElev.Direction, MyElev.State = newDir, newState
 					elevio.SetMotorDirection(newDir)
-					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, RxElevInfoChan)
+					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 				}
 			}
 		case newFloor := <-NewFloorChan:
@@ -161,7 +161,7 @@ func RunElevator(myIP string,
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 				}
 			}
-			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, RxElevInfoChan)
+			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
 		case newBtnPress := <-NewBtnPressChan:
 			switch newBtnPress.Button {
@@ -195,12 +195,20 @@ func RunElevator(myIP string,
 				}
 			case localTypes.Button_hall_up:
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					localTypes.SendButtonInfo(MyElev, newBtnPress.Button, RxNewHallRequestChan, TxNewHallRequestChan) //change to TX
-
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxNewHallRequestChan <- newBtnPress
+					} else {
+						TxNewHallRequestChan <- newBtnPress
+					}
 				}
+
 			case localTypes.Button_hall_down:
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					localTypes.SendButtonInfo(MyElev, newBtnPress.Button, RxNewHallRequestChan, TxNewHallRequestChan) //change to TX
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxNewHallRequestChan <- newBtnPress
+					} else {
+						TxNewHallRequestChan <- newBtnPress
+					}
 				}
 			}
 
