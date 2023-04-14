@@ -41,7 +41,7 @@ type BUTTON_INFO struct {
 }
 
 type HMATRIX [NUM_FLOORS][NUM_BUTTONS - 1]bool
-type ORDER map[string][NUM_FLOORS][NUM_BUTTONS - 1]bool
+type ORDER map[string]HMATRIX
 type P2P_ELEV_INFO []LOCAL_ELEVATOR_INFO
 
 type FOREIGN_ORDER_TYPE struct {
@@ -62,7 +62,7 @@ type LOCAL_ELEVATOR_INFO struct {
 	Floor     int
 	Direction MOTOR_DIR
 	State     ELEVATOR_STATE
-	CabCalls  [NUM_FLOORS]bool
+	CabCalls  [NUM_FLOORS]bool 
 	ElevID    string
 }
 
@@ -175,4 +175,20 @@ func IsMaster(MyIP string, Peers []string) bool {
 	v := myIP[3] <= lowestIP[3]
 	fmt.Printf("Am I master: %v\n", v)*/
 	return myIP[3] <= lowestIP[3]
+}
+
+func SendlocalElevInfo(MyElev LOCAL_ELEVATOR_INFO, RXchan chan<- LOCAL_ELEVATOR_INFO, TXchan chan<- LOCAL_ELEVATOR_INFO){
+	if len(PeerList.Peers) == 0 {
+		RXchan <- MyElev
+	} else {
+		TXchan <- MyElev
+	}
+}
+
+func SendButtonInfo(MyElev LOCAL_ELEVATOR_INFO, btntype BUTTON_TYPE, RXButtonchan chan<- BUTTON_INFO, TXButtonchan chan<- BUTTON_INFO){
+	if len(PeerList.Peers) == 0 {
+		RXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
+	} else {
+		TXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
+	}
 }

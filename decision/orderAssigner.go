@@ -29,8 +29,9 @@ func OrderAssigner(
 	}
 
 	currentHRAInput := DLOCC.NewAllFalseHRAInput()
-	lastOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-	var OAticker = time.NewTicker(time.Millisecond * 999)
+	var lastOrders map[string]localTypes.HMATRIX
+	//lastOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
+	var OAticker = time.NewTicker(time.Millisecond * 100)
 
 	for {
 		select {
@@ -59,15 +60,14 @@ func OrderAssigner(
 
 		case <-OAticker.C:
 			if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
-
 				newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
 				if !reflect.DeepEqual(newOrders, lastOrders) {
 					lastOrders = newOrders
 
 					if len(localTypes.PeerList.Peers) == 0 {
-						RxNewOrdersChan <- newOrders
+						RxNewOrdersChan <- lastOrders
 					} else {
-						TxNewOrdersChan <- newOrders
+						TxNewOrdersChan <- lastOrders
 					}
 					for k, v := range newOrders {
 						fmt.Printf("New Orders from ticker: %s: %v\n", k, v)

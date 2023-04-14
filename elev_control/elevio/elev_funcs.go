@@ -30,16 +30,16 @@ func SendWithDelay(foreignElevs localTypes.P2P_ELEV_INFO, TxChannel chan<- local
 
 // Private funcs
 
-func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.HMATRIX) bool { //neccecary?
+func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.HMATRIX) bool {
 	return CurrentHMatrix[newOrder.Floor][newOrder.Button]
 }
 
 func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) bool {
-		if MyElev.CabCalls[MyElev.Floor] || MyOrders[MyElev.Floor][localTypes.Button_hall_down] || MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
-			return true
-		}else {
-			return false
-		}
+	if MyElev.CabCalls[MyElev.Floor] || MyOrders[MyElev.Floor][localTypes.Button_hall_down] || MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
+		return true
+	} else {
+		return false
+	}
 }
 
 func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
@@ -99,6 +99,31 @@ func FindDirection(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HM
 		return localTypes.DIR_up, localTypes.Moving
 	case MyElev.Direction == localTypes.DIR_stop && Requests_below(MyElev, MyOrders):
 		return localTypes.DIR_down, localTypes.Moving
+	default:
+		return localTypes.DIR_stop, localTypes.Idle
+	}
+}
+
+func FindDirection2(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) (localTypes.MOTOR_DIR, localTypes.ELEVATOR_STATE) {
+
+	switch true {
+	case MyElev.Direction == localTypes.DIR_up && Requests_above(MyElev, MyOrders):
+		return localTypes.DIR_up, localTypes.Moving
+	case MyElev.Direction == localTypes.DIR_up && Requests_below(MyElev, MyOrders):
+		return localTypes.DIR_down, localTypes.Moving
+	case MyElev.Direction == localTypes.DIR_up && Requests_here(MyElev, MyOrders):
+		return localTypes.DIR_stop, localTypes.Door_open
+	case MyElev.Direction == localTypes.DIR_down && Requests_below(MyElev, MyOrders):
+		return localTypes.DIR_down, localTypes.Moving
+	case MyElev.Direction == localTypes.DIR_down && Requests_above(MyElev, MyOrders):
+		return localTypes.DIR_up, localTypes.Moving
+	case MyElev.Direction == localTypes.DIR_down && Requests_here(MyElev, MyOrders):
+		return localTypes.DIR_stop, localTypes.Door_open
+	case MyElev.Direction == localTypes.DIR_stop && Requests_above(MyElev, MyOrders):
+		return localTypes.DIR_up, localTypes.Moving
+	case MyElev.Direction == localTypes.DIR_stop && Requests_below(MyElev, MyOrders):
+		return localTypes.DIR_down, localTypes.Moving
+
 	default:
 		return localTypes.DIR_stop, localTypes.Idle
 	}
