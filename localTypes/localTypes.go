@@ -89,11 +89,11 @@ const (
 )
 
 // ----- FUNCTIONS (VALIDATION) ------ //
-func isValidFloor(floor int) bool {
+func IsValidFloor(floor int) bool {
 	return floor >= 0 && floor <= NUM_FLOORS
 }
 
-func isValidID(ID string) bool {
+func IsValidID(ID string) bool {
 	id, err := strconv.Atoi(ID)
 	if err != nil || id < 0 {
 		return false
@@ -101,36 +101,36 @@ func isValidID(ID string) bool {
 	return true
 }
 
-func (state ELEVATOR_STATE) isValid() bool {
+func (state ELEVATOR_STATE) IsValid() bool {
 	return state == Idle ||
 		state == Moving ||
 		state == Door_open
 }
 
-func (button BUTTON_TYPE) isValid() bool {
+func (button BUTTON_TYPE) IsValid() bool {
 	return button == Button_Cab ||
 		button == Button_hall_up ||
 		button == Button_hall_down
 }
 
-func (btnInfo BUTTON_INFO) isValid() bool {
-	return btnInfo.Button.isValid() && isValidFloor(btnInfo.Floor)
+func (btnInfo BUTTON_INFO) IsValid() bool {
+	return btnInfo.Button.IsValid() && IsValidFloor(btnInfo.Floor)
 }
 
-func (order FOREIGN_ORDER_TYPE) isValid() bool {
-	return BUTTON_INFO(order.Foreign_order).isValid()
+func (order FOREIGN_ORDER_TYPE) IsValid() bool {
+	return BUTTON_INFO(order.Foreign_order).IsValid()
 }
 
-func (dir MOTOR_DIR) isValid() bool {
+func (dir MOTOR_DIR) IsValid() bool {
 	return dir == DIR_down ||
 		dir == DIR_up ||
 		dir == DIR_stop
 }
 
-func (loc_elev LOCAL_ELEVATOR_INFO) isValid() bool {
-	return isValidFloor(loc_elev.Floor) &&
-		loc_elev.Direction.isValid() &&
-		loc_elev.State.isValid()
+func (loc_elev LOCAL_ELEVATOR_INFO) IsValid() bool {
+	return IsValidFloor(loc_elev.Floor) &&
+		loc_elev.Direction.IsValid() &&
+		loc_elev.State.IsValid()
 }
 
 //************ const for P2P ************

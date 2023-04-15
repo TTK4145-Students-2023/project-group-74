@@ -28,8 +28,6 @@ func SendWithDelay(foreignElevs localTypes.P2P_ELEV_INFO, TxChannel chan<- local
 	TxChannel <- foreignElevs
 }
 
-// Private funcs
-
 func IsHOrderActive(newOrder localTypes.BUTTON_INFO, CurrentHMatrix localTypes.HMATRIX) bool {
 	return CurrentHMatrix[newOrder.Floor][newOrder.Button]
 }
@@ -80,10 +78,7 @@ func AddOneNewOrderBtn(newOrder localTypes.BUTTON_INFO, MyElev localTypes.LOCAL_
 	return MyElev.CabCalls
 }
 
-//Internal funcs
-
 func FindDirection(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) (localTypes.MOTOR_DIR, localTypes.ELEVATOR_STATE) {
-
 	switch true {
 	case Requests_here(MyElev, MyOrders):
 		return localTypes.DIR_stop, localTypes.Door_open
@@ -105,7 +100,6 @@ func FindDirection(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HM
 }
 
 func FindDirectionNotHere(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) (localTypes.MOTOR_DIR, localTypes.ELEVATOR_STATE) {
-
 	switch true {
 	case MyElev.Direction == localTypes.DIR_up && Requests_above(MyElev, MyOrders):
 		return localTypes.DIR_up, localTypes.Moving
@@ -127,17 +121,6 @@ func FindDirectionNotHere(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localT
 	default:
 		return localTypes.DIR_stop, localTypes.Idle
 	}
-}
-
-func dir2Btntype(dir localTypes.MOTOR_DIR) localTypes.BUTTON_TYPE {
-	if dir == localTypes.DIR_up {
-		return localTypes.Button_hall_up
-	} else if dir == localTypes.DIR_down {
-		return localTypes.Button_hall_down
-	} else if dir == localTypes.DIR_stop {
-		return localTypes.Button_Cab
-	}
-	panic("No mototdir found???")
 }
 
 func Requests_here(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) bool {
@@ -174,17 +157,6 @@ func Requests_below(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 	return false
 }
 
-func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRIX) [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool {
-	var result [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool
-	for i := 0; i < localTypes.NUM_FLOORS; i++ {
-		result[i][0] = MyCabs[i]
-		for j := 1; j < localTypes.NUM_BUTTONS; j++ {
-			result[i][j] = MyOrders[i][j-1]
-		}
-	}
-	return result
-}
-
 func AddNewOrdersToLocal(newOrder localTypes.ORDER, MyOrders localTypes.HMATRIX, MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.HMATRIX {
 	for f := 0; f < localTypes.NUM_FLOORS; f++ {
 		for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {
@@ -206,4 +178,27 @@ func AddNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
 		}
 	}
 	return CombinedHMatrix
+}
+
+// ----- PRIVATE FUNCTIONS ------ //
+func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRIX) [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool {
+	var result [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool
+	for i := 0; i < localTypes.NUM_FLOORS; i++ {
+		result[i][0] = MyCabs[i]
+		for j := 1; j < localTypes.NUM_BUTTONS; j++ {
+			result[i][j] = MyOrders[i][j-1]
+		}
+	}
+	return result
+}
+
+func dir2Btntype(dir localTypes.MOTOR_DIR) localTypes.BUTTON_TYPE {
+	if dir == localTypes.DIR_up {
+		return localTypes.Button_hall_up
+	} else if dir == localTypes.DIR_down {
+		return localTypes.Button_hall_down
+	} else if dir == localTypes.DIR_stop {
+		return localTypes.Button_Cab
+	}
+	panic("No mototdir found???")
 }
