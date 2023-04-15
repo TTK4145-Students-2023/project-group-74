@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"project-group-74/decision/DLOCC"
 	"project-group-74/localTypes"
-	"reflect"
 	"runtime"
 	"time"
 )
@@ -41,20 +40,24 @@ func OrderAssigner(
 			//}
 			newHRAelev := DLOCC.LocalState2HRASTATE(newElevInfo)
 			currentHRAInput.States[newElevInfo.ElevID] = newHRAelev
+			fmt.Printf("NET:LocalState:: %+v\n", newElevInfo)
+			fmt.Printf("NET:LocalState:: %+v\n", newHRAelev)
 			if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 				newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-				if !reflect.DeepEqual(newOrders, lastOrders) {
-					lastOrders = newOrders
+				//if !reflect.DeepEqual(newOrders, lastOrders) {
+				fmt.Printf("NET:newO:: %+v\n", newOrders)
+				fmt.Printf("NET:LastO: %+v\n", lastOrders)
+				lastOrders = newOrders
 
-					if len(localTypes.PeerList.Peers) == 0 {
-						RxNewOrdersChan <- lastOrders
-					} else {
-						TxNewOrdersChan <- lastOrders
-					}
-					for k, v := range newOrders {
-						fmt.Printf("New Orders from ticker: %s: %v\n", k, v)
-					}
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxNewOrdersChan <- lastOrders
+				} else {
+					TxNewOrdersChan <- lastOrders
 				}
+				for k, v := range newOrders {
+					fmt.Printf("New Orders from newelevinfo: %s: %v\n", k, v)
+				}
+				//}
 			}
 
 		case newHRequest := <-RxNewHallRequestChan:
@@ -66,18 +69,18 @@ func OrderAssigner(
 				fmt.Printf("DLOCC: NewHrequest: \n")
 				if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 					newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-					if !reflect.DeepEqual(newOrders, lastOrders) {
-						lastOrders = newOrders
+					//if !reflect.DeepEqual(newOrders, lastOrders) {
+					lastOrders = newOrders
 
-						if len(localTypes.PeerList.Peers) == 0 {
-							RxNewOrdersChan <- lastOrders
-						} else {
-							TxNewOrdersChan <- lastOrders
-						}
-						for k, v := range newOrders {
-							fmt.Printf("New Orders from ticker: %s: %v\n", k, v)
-						}
+					if len(localTypes.PeerList.Peers) == 0 {
+						RxNewOrdersChan <- lastOrders
+					} else {
+						TxNewOrdersChan <- lastOrders
 					}
+					for k, v := range newOrders {
+						fmt.Printf("New Orders from ticker: %s: %v\n", k, v)
+					}
+					//}
 				}
 			}
 
@@ -89,18 +92,18 @@ func OrderAssigner(
 			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = false
 			if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 				newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-				if !reflect.DeepEqual(newOrders, lastOrders) {
-					lastOrders = newOrders
+				//if !reflect.DeepEqual(newOrders, lastOrders) {
+				lastOrders = newOrders
 
-					if len(localTypes.PeerList.Peers) == 0 {
-						RxNewOrdersChan <- lastOrders
-					} else {
-						TxNewOrdersChan <- lastOrders
-					}
-					for k, v := range newOrders {
-						fmt.Printf("New Orders from ticker: %s: %v\n", k, v)
-					}
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxNewOrdersChan <- lastOrders
+				} else {
+					TxNewOrdersChan <- lastOrders
 				}
+				for k, v := range newOrders {
+					fmt.Printf("New Orders from ticker: %s: %v\n", k, v)
+				}
+				//}
 			}
 			/*
 				case <-OAticker.C:

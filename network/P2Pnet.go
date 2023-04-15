@@ -93,7 +93,7 @@ func P2Pnet(
 	go bcast.Transmitter(port5, BCP2PElevInfoTx)
 
 	// Broadcast Timer
-	broadcastTimer := time.NewTimer(BroadcastRate)
+	//broadcastTimer := time.NewTimer(BroadcastRate)
 	recieveTimer := time.NewTimer(1)
 	recieveTimer.Stop()
 
@@ -107,22 +107,27 @@ func P2Pnet(
 			// Broadcasting on network
 		case localState = <-TxElevInfoChan:
 			fmt.Printf("NET: Transmit local state::   %+v\n", localState)
+			BCLocalStateTx <- localState
 		case newHallReq = <-TxNewHallRequestChan:
 			fmt.Printf("NET: Transmit new hall req::   %+v\n", rxnewHallReq)
+			BCNewHallReqTx <- newHallReq
 		case finHallReq = <-TxFinishedHallOrderChan:
 			fmt.Printf("NET: Transmit finished hall order::   %+v\n", finHallReq)
+			BCFinHallOrderTx <- finHallReq
 		case newOrder = <-TxNewOrdersChan:
 			fmt.Printf("NET: Transmit new order::   %+v\n", newOrder)
+			BCNewOrderTx <- newOrder
 		case p2pElevInfo = <-TxP2PElevInfoChan:
 			fmt.Printf("NET: Transmit P2Pelevinfo::   %+v\n", p2pElevInfo)
-		case <-broadcastTimer.C:
-			fmt.Printf("NET: Broadcasting NOW\n")
-			BCLocalStateTx <- localState
-			BCNewHallReqTx <- newHallReq
-			BCFinHallOrderTx <- finHallReq
-			BCNewOrderTx <- newOrder
 			BCP2PElevInfoTx <- p2pElevInfo
-			broadcastTimer.Reset(BroadcastRate)
+		/*case <-broadcastTimer.C:
+		fmt.Printf("NET: Broadcasting NOW\n")
+		BCLocalStateTx <- localState
+		BCNewHallReqTx <- newHallReq
+		BCFinHallOrderTx <- finHallReq
+		BCNewOrderTx <- newOrder
+		BCP2PElevInfoTx <- p2pElevInfo
+		broadcastTimer.Reset(BroadcastRate)*/
 
 		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
 			sort.Slice(rxP2pElevinfo, func(i, j int) bool {
@@ -155,11 +160,11 @@ func P2Pnet(
 				RxElevInfoChan <- rxLocalState
 			}
 		case newrxnewOrder := <-RecieveOrderRx:
-			if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
-				rxnewOrder = newrxnewOrder
-				fmt.Printf("NET:NewOrder:: %+v\n", rxnewOrder)
-				RxNewOrdersChan <- rxnewOrder
-			}
+			//if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
+			rxnewOrder = newrxnewOrder
+			fmt.Printf("NET:NewOrder:: %+v\n", rxnewOrder)
+			RxNewOrdersChan <- rxnewOrder
+			//}
 		}
 	}
 }
