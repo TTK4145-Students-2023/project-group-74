@@ -41,7 +41,7 @@ type BUTTON_INFO struct {
 }
 
 type HMATRIX [NUM_FLOORS][NUM_BUTTONS - 1]bool
-type ORDER map[string][NUM_FLOORS][NUM_BUTTONS - 1]bool
+type ORDER map[string]HMATRIX
 type P2P_ELEV_INFO []LOCAL_ELEVATOR_INFO
 
 type FOREIGN_ORDER_TYPE struct {
@@ -157,9 +157,9 @@ func splitIPAddr(ip string) byte {
 	return addr[3]
 }
 
-func CompareIPAddr(MyIP string, Peers []string) bool {
+func IsMaster(MyIP string, Peers []string) bool {
 	if len(Peers) == 0 {
-		Peers = append(Peers, MyIP)
+		return true
 	}
 	lowestIP := Peers[0]
 	for _, ip := range Peers {
@@ -177,6 +177,18 @@ func CompareIPAddr(MyIP string, Peers []string) bool {
 	return myIP[3] <= lowestIP[3]
 }
 
-func IsMaster(MyIP string, Peers []string) bool {
-	return CompareIPAddr(MyIP, Peers)
+func SendlocalElevInfo(MyElev LOCAL_ELEVATOR_INFO, RXchan chan<- LOCAL_ELEVATOR_INFO, TXchan chan<- LOCAL_ELEVATOR_INFO) {
+	if len(PeerList.Peers) == 0 {
+		RXchan <- MyElev
+	} else {
+		TXchan <- MyElev
+	}
+}
+
+func SendButtonInfo(MyElev LOCAL_ELEVATOR_INFO, btntype BUTTON_TYPE, RXButtonchan chan<- BUTTON_INFO, TXButtonchan chan<- BUTTON_INFO) {
+	if len(PeerList.Peers) == 0 {
+		RXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
+	} else {
+		TXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
+	}
 }

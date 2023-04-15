@@ -58,7 +58,7 @@ func NewAllFalseHRAInput() localTypes.HRAInput {
 	return output
 }
 
-func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[string][localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS - 1]bool {
+func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[string]localTypes.HMATRIX {
 	jsonBytes, err := json.Marshal(newHRAInput)
 	if err != nil {
 		fmt.Println("json.Marshal error: ", err)
@@ -70,7 +70,7 @@ func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[s
 		fmt.Println(string(ret))
 	}
 
-	output := map[string][localTypes.NUM_FLOORS][2]bool{}
+	output := map[string]localTypes.HMATRIX{}
 	err = json.Unmarshal(ret, &output)
 	if err != nil {
 		fmt.Println("json.Unmarshal error: ", err)
