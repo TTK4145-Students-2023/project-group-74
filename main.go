@@ -14,8 +14,8 @@ func main() {
 	TxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO, 10)
 	RxElevInfoChan := make(chan localTypes.LOCAL_ELEVATOR_INFO, 10)
 
-	TxNewHallRequestChan := make(chan localTypes.BUTTON_INFO, 10)
-	RxNewHallRequestChan := make(chan localTypes.BUTTON_INFO, 10)
+	TxNewHallRequestChan := make(chan localTypes.BUTTON_INFO)
+	RxNewHallRequestChan := make(chan localTypes.BUTTON_INFO)
 
 	TxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO, 10)
 	RxFinishedHallOrderChan := make(chan localTypes.BUTTON_INFO, 10)
