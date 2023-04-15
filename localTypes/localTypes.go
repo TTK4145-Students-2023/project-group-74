@@ -1,8 +1,6 @@
 package localTypes
 
 import (
-	//project config
-
 	"net"
 	"project-group-74/network/subs/peers"
 	"strconv"
@@ -10,10 +8,6 @@ import (
 )
 
 // ----- CONSTANTS ------ //
-// Create an init file with the following constants
-// Time
-// RX_BUFFER
-
 const (
 	NUM_BUTTONS = 3
 	NUM_FLOORS  = 4
@@ -26,7 +20,6 @@ const (
 )
 
 // ----- TYPE DEFINITIONS ------ //
-
 type BUTTON_TYPE int
 
 const (
@@ -171,9 +164,6 @@ func IsMaster(MyIP string, Peers []string) bool {
 	}
 	myIP := net.ParseIP(MyIP).To4()
 	lowestIP = string(net.ParseIP(lowestIP).To4())
-	/*fmt.Printf("My IP: %v\n", myIP)
-	v := myIP[3] <= lowestIP[3]
-	fmt.Printf("Am I master: %v\n", v)*/
 	return myIP[3] <= lowestIP[3]
 }
 
@@ -190,5 +180,13 @@ func SendButtonInfo(MyElev LOCAL_ELEVATOR_INFO, btntype BUTTON_TYPE, RXButtoncha
 		RXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
 	} else {
 		TXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
+	}
+}
+
+func SendButtonPress(MyElev LOCAL_ELEVATOR_INFO, btnpress BUTTON_INFO, RXButtonchan chan<- BUTTON_INFO, TXButtonchan chan<- BUTTON_INFO) {
+	if len(PeerList.Peers) == 0 {
+		RXButtonchan <- btnpress
+	} else {
+		TXButtonchan <- btnpress
 	}
 }

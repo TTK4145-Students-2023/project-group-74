@@ -104,7 +104,7 @@ func FindDirection(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HM
 	}
 }
 
-func FindDirection2(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) (localTypes.MOTOR_DIR, localTypes.ELEVATOR_STATE) {
+func FindDirectionNotHere(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.HMATRIX) (localTypes.MOTOR_DIR, localTypes.ELEVATOR_STATE) {
 
 	switch true {
 	case MyElev.Direction == localTypes.DIR_up && Requests_above(MyElev, MyOrders):
