@@ -3,7 +3,7 @@
 ## Table of contents
 * [General info](#general-info)
 * [Module description](#module-description)
-* [Setup](#setup)
+* [Execute](#execute)
 
 ## General info
 The Elevator Project requires creating software that can control multiple elevators operating in parallel across multiple floors. The main requirements include: 
@@ -32,7 +32,7 @@ This module is responsible for running an elevator control system. It communicat
 ### Local Types 
 This module defines a number of constants, type definitions, and validation functions for an elevator control system. The constants include the number of ```buttons```, ```floors```, and orders, as well as various time intervals and update intervals. The type definitions include button types, button information, elevator states, motor directions, elevator information, and input/output structures. The validation functions ensure that inputs to the system are valid.	
 
-## Setup
+## Execute
 To run this project, run the following command in an open terminal on 3 of the computers at Sanntidlaben. Requires an active ```elevatorserver```
 
 ```
