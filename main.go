@@ -29,6 +29,7 @@ func main() {
 	NewBtnPressChan := make(chan localTypes.BUTTON_INFO, 10)
 	NewFloorChan := make(chan int, 10)
 	ObstructionChan := make(chan bool, 10)
+	LostElevChan := make(chan []string, 10)
 
 	TxHRAInputChan := make(chan localTypes.HRAInput, 10)
 	RxHRAInputChan := make(chan localTypes.HRAInput, 10)
@@ -50,6 +51,7 @@ func main() {
 		RxP2PElevInfoChan,
 		TxHRAInputChan,
 		RxHRAInputChan,
+		LostElevChan,
 	)
 
 	go elev_control.RunElevator(myIP,
@@ -74,7 +76,9 @@ func main() {
 		TxNewOrdersChan,
 		RxNewOrdersChan,
 		TxHRAInputChan,
-		RxHRAInputChan)
+		RxHRAInputChan,
+		LostElevChan,
+	)
 
 	go elevio.PollButtons(NewBtnPressChan)
 	go elevio.PollFloorSensor(NewFloorChan)

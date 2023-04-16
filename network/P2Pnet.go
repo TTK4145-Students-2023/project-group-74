@@ -34,7 +34,8 @@ func P2Pnet(
 	TxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
 	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO,
 	TxHRAInputChan <-chan localTypes.HRAInput,
-	RxHRAInputChan chan<- localTypes.HRAInput) {
+	RxHRAInputChan chan<- localTypes.HRAInput,
+	LostElevChan chan<- []string) {
 
 	var (
 		// Tx var
@@ -113,6 +114,9 @@ func P2Pnet(
 		case p := <-peerUpdateCh:
 			printPeerUpdate(p)
 			localTypes.PeerList.Peers = p.Peers
+			if len(p.Lost) != 0 {
+				LostElevChan <- p.Lost
+			}
 			// Broadcasting on network
 		case localState = <-TxElevInfoChan:
 			BCLocalStateTx <- localState

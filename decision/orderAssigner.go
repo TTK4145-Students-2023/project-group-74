@@ -16,6 +16,7 @@ func OrderAssigner(
 	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
 	TxHRAInputChan chan<- localTypes.HRAInput,
 	RxHRAInputChan <-chan localTypes.HRAInput,
+	LostElevChan <-chan []string,
 ) {
 
 	hraExecutable := ""
@@ -39,7 +40,7 @@ func OrderAssigner(
 	for initializing {
 		select {
 		case NewHRAInput := <-RxHRAInputChan:
-			if !restored{
+			if !restored {
 				currentHRAInput = NewHRAInput
 				restored = true
 				fmt.Printf("\nNew HRAInput into init \n")
@@ -89,7 +90,6 @@ func OrderAssigner(
 				fmt.Printf("DLOCC: NewHrequest: \n")
 				if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 					newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-					//if !reflect.DeepEqual(newOrders, lastOrders) {
 					lastOrders = newOrders
 
 					if len(localTypes.PeerList.Peers) == 0 {
@@ -100,7 +100,6 @@ func OrderAssigner(
 					for k, v := range newOrders {
 						fmt.Printf("New from hallreq: %s: %v\n", k, v)
 					}
-					//}
 				}
 			} else {
 				fmt.Printf("\n pre blocking\n")
@@ -116,41 +115,36 @@ func OrderAssigner(
 			currentHRAInput.HallRequests[finishedHOrder.Floor][finishedHOrder.Button] = false
 			if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
 				newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-				//if !reflect.DeepEqual(newOrders, lastOrders) {
 				lastOrders = newOrders
-
 				if len(localTypes.PeerList.Peers) == 0 {
 					RxNewOrdersChan <- lastOrders
 				} else {
 					TxNewOrdersChan <- lastOrders
 				}
-				//for k, v := range newOrders {
 				fmt.Printf("New Orders finhallreq: %+v\n", newOrders)
-				//}
-				//}
 			} else {
-				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
-				fmt.Printf("\n non blocking\n")
 			}
 
-			/*
-				case <-OAticker.C:
-					if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
-						newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
-						if !reflect.DeepEqual(newOrders, lastOrders) {
-							lastOrders = newOrders
+		case lostElev := <-LostElevChan:
+			for _, len := range lostElev {
+				delete(currentHRAInput.States, len)
+			}
+			if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
+				newOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
+				lastOrders = newOrders
+				if len(localTypes.PeerList.Peers) == 0 {
+					RxNewOrdersChan <- lastOrders
+				} else {
+					TxNewOrdersChan <- lastOrders
+				}
+			} else {
+				TxHRAInputChan <- currentHRAInput
+			}
 
-							if len(localTypes.PeerList.Peers) == 0 {
-								RxNewOrdersChan <- lastOrders
-							} else {
-								TxNewOrdersChan <- lastOrders
-							}
-							for k, v := range newOrders {
-								fmt.Printf("New Orders from ticker: %s: %v\n", k, v)
-							}
-						}
-					}*/
+		case <-RxHRAInputChan:
+			time.Sleep((time.Millisecond * 100))
+
 		default:
 			time.Sleep((time.Millisecond * 100))
 		}
