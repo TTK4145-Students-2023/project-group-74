@@ -38,16 +38,17 @@ func P2Pnet(
 	var (
 		// Tx var
 		p2pElevInfo = localTypes.P2P_ELEV_INFO{}
-		newHallReq  = localTypes.BUTTON_INFO{}
-		finHallReq  = localTypes.BUTTON_INFO{}
+		newHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
+		finHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		localState  = localTypes.LOCAL_ELEVATOR_INFO{}
 		newOrder    = map[string]localTypes.HMATRIX{}
 		// Rx var
 		rxP2pElevinfo = localTypes.P2P_ELEV_INFO{}
-		rxnewHallReq  = localTypes.BUTTON_INFO{}
-		rxfinHallReq  = localTypes.BUTTON_INFO{}
+		rxnewHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
+		rxfinHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		rxLocalState  = localTypes.LOCAL_ELEVATOR_INFO{}
 		rxnewOrder    = map[string]localTypes.HMATRIX{}
+
 		// Tx chan
 		BCLocalStateTx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		BCNewHallReqTx   = make(chan localTypes.BUTTON_INFO)
@@ -99,6 +100,7 @@ func P2Pnet(
 
 	for {
 		select {
+		// case der vi sjekker om vi er i init state, og tømmer? variablene
 
 		// Print Peer Updates
 		case p := <-peerUpdateCh:
@@ -109,8 +111,10 @@ func P2Pnet(
 			fmt.Printf("NET: Transmit local state::   %+v\n", localState)
 			BCLocalStateTx <- localState
 		case newHallReq = <-TxNewHallRequestChan:
+
 			fmt.Printf("NET: Transmit new hall req::   %+v\n", rxnewHallReq)
 			BCNewHallReqTx <- newHallReq
+
 		case finHallReq = <-TxFinishedHallOrderChan:
 			fmt.Printf("NET: Transmit finished hall order::   %+v\n", finHallReq)
 			BCFinHallOrderTx <- finHallReq
@@ -142,13 +146,15 @@ func P2Pnet(
 				RxP2PElevInfoChan <- rxP2pElevinfo
 			}
 		case newrxnewHallReq := <-RecieveNewHallReqRx:
-			if rxnewHallReq != newrxnewHallReq {
+
+			if newrxnewHallReq.Floor != 4 {
 				rxnewHallReq = newrxnewHallReq
-				fmt.Printf("NET:newHallReq:: %+v\n", rxnewHallReq)
+				fmt.Printf("NET:RxnewHallReq:: %+v\n", rxnewHallReq)
 				RxNewHallRequestChan <- rxnewHallReq
 			}
+
 		case newrxfinHallReq := <-RecieveFinHallOrderRx:
-			if rxfinHallReq != newrxfinHallReq {
+			if newrxfinHallReq.Floor != 4 {
 				rxfinHallReq = newrxfinHallReq
 				fmt.Printf("NET:FinHallReq:: %+v\n", rxfinHallReq)
 				RxFinishedHallOrderChan <- rxfinHallReq
