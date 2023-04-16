@@ -35,10 +35,11 @@ func OrderAssigner(
 	restored := false
 	initializing := true
 	var initimer *time.Timer
-	initimer = time.NewTimer(time.Second * 1)
+	initimer = time.NewTimer(time.Second * 3)
 	for initializing {
 		select {
 		case NewHRAInput := <-RxHRAInputChan:
+			fmt.Printf("\nNew HRAInput into init \n")
 			if restored == false {
 				currentHRAInput = NewHRAInput
 				restored = true
@@ -47,7 +48,7 @@ func OrderAssigner(
 
 		case <-initimer.C:
 			initializing = false
-			fmt.Printf("\n\n\n\nInitializing finished!\n\n\n")
+			fmt.Printf("\n\n\n\nInitializing finished OA!\n\n\n")
 		default:
 			time.Sleep(80 * time.Millisecond)
 		}

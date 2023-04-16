@@ -35,7 +35,7 @@ func RunElevator(
 	var CombinedHMatrix localTypes.HMATRIX
 	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	TxP2PElevInfoChan <- AllElevs
-	
+
 	var dooropentimer *time.Timer
 	dooropentimer = time.NewTimer(time.Second * 1000)
 	dooropentimer.Stop()
@@ -51,7 +51,6 @@ func RunElevator(
 		case P2Pinfo := <-RxP2PElevInfoChan:
 			if restored == false {
 				for i := 0; i < len(P2Pinfo); i++ {
-					fmt.Printf("\n elevinfo in p2p info %+v \n", P2Pinfo[i])
 
 					if P2Pinfo[i].ElevID == MyElev.ElevID {
 						MyElev.CabCalls = P2Pinfo[i].CabCalls
@@ -68,7 +67,7 @@ func RunElevator(
 
 		case <-initimer.C:
 			initializing = false
-			fmt.Printf("\n\n\n\nInitializing finished!\n\n\n")
+			fmt.Printf("\n\n\n\nInitializing ECfinished!\n\n\n")
 		default:
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			time.Sleep(80 * time.Millisecond)
