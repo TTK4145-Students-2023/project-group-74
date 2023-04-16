@@ -31,6 +31,7 @@ func main() {
 	ObstructionChan := make(chan bool, 10)
 
 	TxHRAInputChan := make(chan localTypes.HRAInput, 10)
+	RxHRAInputChan := make(chan localTypes.HRAInput, 10)
 
 	elevio.Init("localhost:15657", localTypes.NUM_FLOORS)
 
@@ -46,7 +47,10 @@ func main() {
 		TxNewOrdersChan,
 		RxNewOrdersChan,
 		TxP2PElevInfoChan,
-		RxP2PElevInfoChan)
+		RxP2PElevInfoChan,
+		TxHRAInputChan,
+		RxHRAInputChan,
+	)
 
 	go elev_control.RunElevator(myIP,
 		TxElevInfoChan,
@@ -69,7 +73,8 @@ func main() {
 		RxFinishedHallOrderChan,
 		TxNewOrdersChan,
 		RxNewOrdersChan,
-		TxHRAInputChan)
+		TxHRAInputChan,
+		RxHRAInputChan)
 
 	go elevio.PollButtons(NewBtnPressChan)
 	go elevio.PollFloorSensor(NewFloorChan)

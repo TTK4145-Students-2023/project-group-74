@@ -35,11 +35,11 @@ func RunElevator(
 	var CombinedHMatrix localTypes.HMATRIX
 	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
 	TxP2PElevInfoChan <- AllElevs
-	restored := false
+	
 	var dooropentimer *time.Timer
 	dooropentimer = time.NewTimer(time.Second * 1000)
 	dooropentimer.Stop()
-
+	restored := false
 	initializing := true
 	elevio.SetDoorOpenLamp(false)
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)

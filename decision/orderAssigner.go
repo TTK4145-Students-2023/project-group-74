@@ -14,7 +14,8 @@ func OrderAssigner(
 	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
 	TxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
 	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
-	TxHRAInputChan <-chan localTypes.HRAInput,
+	TxHRAInputChan chan<- localTypes.HRAInput,
+	RxHRAInputChan <-chan localTypes.HRAInput,
 ) {
 
 	hraExecutable := ""
@@ -31,7 +32,26 @@ func OrderAssigner(
 	var lastOrders map[string]localTypes.HMATRIX
 	//lastOrders := DLOCC.ReassignOrders(currentHRAInput, hraExecutable)
 	//var OAticker = time.NewTicker(time.Millisecond * 100)
+	restored := false
+	initializing := true
+	var initimer *time.Timer
+	initimer = time.NewTimer(time.Second * 1)
+	for initializing {
+		select {
+		case NewHRAInput := <-RxHRAInputChan:
+			if restored == false {
+				currentHRAInput = NewHRAInput
+				restored = true
+				fmt.Printf("\nNew HRAInput into init \n")
+			}
 
+		case <-initimer.C:
+			initializing = false
+			fmt.Printf("\n\n\n\nInitializing finished!\n\n\n")
+		default:
+			time.Sleep(80 * time.Millisecond)
+		}
+	}
 	for {
 		select {
 		case newElevInfo := <-RxElevInfoChan:
@@ -55,6 +75,7 @@ func OrderAssigner(
 				}*/
 				//}
 			}
+			TxHRAInputChan <- currentHRAInput
 
 		case newHRequest := <-RxNewHallRequestChan:
 			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){

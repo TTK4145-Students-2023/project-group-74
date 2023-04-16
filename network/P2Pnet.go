@@ -17,6 +17,7 @@ const (
 	port3         = 18000
 	port4         = 19000
 	port5         = 20000
+	port6         = 21000
 	BroadcastRate = 100 * time.Millisecond
 )
 
@@ -31,7 +32,9 @@ func P2Pnet(
 	TxNewOrdersChan <-chan map[string]localTypes.HMATRIX,
 	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
 	TxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
-	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO) {
+	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO,
+	TxHRAInputChan <-chan localTypes.HRAInput,
+	RxHRAInputChan chan<- localTypes.HRAInput) {
 
 	var (
 		// Tx var
@@ -40,12 +43,14 @@ func P2Pnet(
 		finHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		localState  = localTypes.LOCAL_ELEVATOR_INFO{}
 		newOrder    = map[string]localTypes.HMATRIX{}
+		newHRAInput = localTypes.HRAInput{}
 		// Rx var
 		rxP2pElevinfo = localTypes.P2P_ELEV_INFO{}
 		rxnewHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		rxfinHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		rxLocalState  = localTypes.LOCAL_ELEVATOR_INFO{}
 		rxnewOrder    = map[string]localTypes.HMATRIX{}
+		rxnewHRAInput = localTypes.HRAInput{}
 
 		// Tx chan
 		BCLocalStateTx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
@@ -53,12 +58,14 @@ func P2Pnet(
 		BCFinHallOrderTx = make(chan localTypes.BUTTON_INFO)
 		BCNewOrderTx     = make(chan map[string]localTypes.HMATRIX)
 		BCP2PElevInfoTx  = make(chan localTypes.P2P_ELEV_INFO)
+		BCNewHRAInput    = make(chan localTypes.HRAInput)
 		// Rx chan
 		RecieveLocalStateRx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		RecieveNewHallReqRx   = make(chan localTypes.BUTTON_INFO)
 		RecieveFinHallOrderRx = make(chan localTypes.BUTTON_INFO)
 		RecieveOrderRx        = make(chan map[string]localTypes.HMATRIX)
 		RecieveP2PElevInfo    = make(chan localTypes.P2P_ELEV_INFO)
+		RecieveNewHRAInput    = make(chan localTypes.HRAInput)
 	)
 
 	if localTypes.MyIP == "" {
@@ -83,6 +90,7 @@ func P2Pnet(
 	go bcast.Receiver(port3, RecieveFinHallOrderRx)
 	go bcast.Receiver(port4, RecieveOrderRx)
 	go bcast.Receiver(port5, RecieveP2PElevInfo)
+	go bcast.Receiver(port6, RecieveNewHRAInput)
 
 	// GoRoutines to broadcast over NTW
 	go bcast.Transmitter(Port1, BCLocalStateTx)
@@ -90,6 +98,7 @@ func P2Pnet(
 	go bcast.Transmitter(port3, BCFinHallOrderTx)
 	go bcast.Transmitter(port4, BCNewOrderTx)
 	go bcast.Transmitter(port5, BCP2PElevInfoTx)
+	go bcast.Transmitter(port6, BCNewHRAInput)
 
 	// Broadcast Timer
 	//broadcastTimer := time.NewTimer(BroadcastRate)
@@ -117,6 +126,8 @@ func P2Pnet(
 			BCNewOrderTx <- newOrder
 		case p2pElevInfo = <-TxP2PElevInfoChan:
 			BCP2PElevInfoTx <- p2pElevInfo
+		case newHRAInput = <-TxHRAInputChan:
+			BCNewHRAInput <- newHRAInput
 		/*case <-broadcastTimer.C:
 		fmt.Printf("NET: Broadcasting NOW\n")
 		BCLocalStateTx <- localState
@@ -126,16 +137,7 @@ func P2Pnet(
 		BCP2PElevInfoTx <- p2pElevInfo
 		broadcastTimer.Reset(BroadcastRate)*/
 
-		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
-
-			/*sort.Slice(rxP2pElevinfo, func(i, j int) bool {
-				return rxP2pElevinfo[i].ElevID < rxP2pElevinfo[j].ElevID
-			})
-			sort.Slice(newrxP2pElevinfo, func(i, j int) bool {
-				return newrxP2pElevinfo[i].ElevID < newrxP2pElevinfo[j].ElevID
-			})*/
-			//if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {
-			rxP2pElevinfo = newrxP2pElevinfo
+		case rxP2pElevinfo = <-RecieveP2PElevInfo: // Legge på sender ID?
 
 			RxP2PElevInfoChan <- rxP2pElevinfo
 
@@ -162,6 +164,9 @@ func P2Pnet(
 			rxnewOrder = newrxnewOrder
 			RxNewOrdersChan <- rxnewOrder
 			//}
+		case rxnewHRAInput = <-RecieveNewHRAInput:
+			RxHRAInputChan <- rxnewHRAInput
+
 		}
 	}
 }
