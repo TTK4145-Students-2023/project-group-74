@@ -220,8 +220,6 @@ func RunElevator(
 		case NewAllElevs := <-RxP2PElevInfoChan:
 			AllElevs = elevio.AddNewAllElevs(AllElevs, NewAllElevs)
 			AllElevs = elevio.UpdateLocalInAllElevs(MyElev, AllElevs)
-			fmt.Printf("\n\n\n\nrecieved this wonderful piece of information! \n\n\n")
-
 			TxP2PElevInfoChan <- AllElevs
 		}
 	}

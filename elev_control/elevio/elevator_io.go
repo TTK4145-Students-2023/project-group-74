@@ -63,8 +63,7 @@ func PollFloorSensor(receiver chan<- int) {
 		v := GetFloor()
 		if v != prev && v != -1 {
 			receiver <- v
-			fmt.Println("newfloor %b", v)
-
+			fmt.Printf("New Floor: %v \n", v)
 		}
 		prev = v
 

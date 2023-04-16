@@ -50,29 +50,37 @@ func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs l
 	return ForeignElevs
 }
 
-func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix localTypes.HMATRIX) {
-	for f := 0; f < localTypes.NUM_FLOORS; package DLOCC
+func UpdateLocalInAllElevs(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
+	for i := 0; i < len(ForeignElevs); i++ {
+		if ForeignElevs[i].ElevID == MyElev.ElevID {
+			ForeignElevs[i] = MyElev
+		}
+	}
+	return ForeignElevs
+}
 
-	import (
-		"project-group-74/localTypes"
-		"time"
-	)
-	
-	const ORDER_WATCHDOG_POLL_RATE = 50 * time.Millisecond
-	
-	
-	var motorDirStrings = map[localTypes.MOTOR_DIR]string{
-		localTypes.DIR_down: "down",
-		localTypes.DIR_stop: "stop",
-		localTypes.DIR_up:   "up",
+func AddNewAllElevs(AllElevs localTypes.P2P_ELEV_INFO, NewAllElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
+	combinedElevs := make(map[string]localTypes.LOCAL_ELEVATOR_INFO)
+
+	// Add elevators from both AllElevs and NewAllElevs to the combined map
+	for _, elevList := range [][]localTypes.LOCAL_ELEVATOR_INFO{AllElevs, NewAllElevs} {
+		for _, elev := range elevList {
+			if elev.IsValid() {
+				combinedElevs[elev.ElevID] = elev
+			}
+		}
 	}
-	
-	var elevStateStrings = map[localTypes.ELEVATOR_STATE]string{
-		localTypes.Idle:      "idle",
-		localTypes.Moving:    "moving",
-		localTypes.Door_open: "doorOpen",
+	// Convert the combined map back to a P2P_ELEV_INFO type
+	result := make(localTypes.P2P_ELEV_INFO, 0, len(combinedElevs))
+	for _, elev := range combinedElevs {
+		result = append(result, elev)
 	}
-	f++ {
+
+	return result
+}
+
+func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix localTypes.HMATRIX) {
+	for f := 0; f < localTypes.NUM_FLOORS; f++ {
 		SetButtonLamp(localTypes.Button_Cab, f, MyElev.CabCalls[f])
 		for btn := 0; btn < localTypes.NUM_BUTTONS-1; btn++ {
 			SetButtonLamp(localTypes.BUTTON_TYPE(btn), f, CurrentHMatrix[f][btn])

@@ -7,12 +7,10 @@ import (
 	"project-group-74/network/subs/bcast"
 	"project-group-74/network/subs/localip"
 	"project-group-74/network/subs/peers"
-	"reflect"
-	"sort"
 	"time"
 )
 
-// ----- CONSTANTS (P2P) ------ //
+// ----- CONSTANTS (NETWORK) ------ //
 const (
 	PeerPort      = 15699
 	Port1         = 16599
@@ -23,12 +21,12 @@ const (
 	BroadcastRate = 100 * time.Millisecond
 )
 
-// ----- VARIABLES (P2P) ------ //
+// ----- VARIABLES (NETWORK) ------ //
 var MyIP string
 
 var PeerList peers.PeerUpdate
 
-// ----- MAIN FUNCTION (P2P) ------ //
+// ----- MAIN FUNCTION (NETWORK) ------ //
 func P2Pnet(
 	TxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
 	RxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO,
@@ -42,25 +40,24 @@ func P2Pnet(
 	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO) {
 
 	var (
-		// Tx var
 		p2pElevInfo = localTypes.P2P_ELEV_INFO{}
 		newHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		finHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		localState  = localTypes.LOCAL_ELEVATOR_INFO{}
 		newOrder    = map[string]localTypes.HMATRIX{}
-		// Rx var
+
 		rxP2pElevinfo = localTypes.P2P_ELEV_INFO{}
 		rxnewHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		rxfinHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
 		rxLocalState  = localTypes.LOCAL_ELEVATOR_INFO{}
 		rxnewOrder    = map[string]localTypes.HMATRIX{}
-		// Tx chan
+
 		BCLocalStateTx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		BCNewHallReqTx   = make(chan localTypes.BUTTON_INFO)
 		BCFinHallOrderTx = make(chan localTypes.BUTTON_INFO)
 		BCNewOrderTx     = make(chan map[string]localTypes.HMATRIX)
 		BCP2PElevInfoTx  = make(chan localTypes.P2P_ELEV_INFO)
-		// Rx chan
+
 		RecieveLocalStateRx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
 		RecieveNewHallReqRx   = make(chan localTypes.BUTTON_INFO)
 		RecieveFinHallOrderRx = make(chan localTypes.BUTTON_INFO)
@@ -78,8 +75,8 @@ func P2Pnet(
 	}
 	fmt.Printf(" NETWORK RUNNING\n")
 
-	peerUpdateCh := make(chan peers.PeerUpdate) //We make a channel for receiving updates on the id's of the peers that are alive on the network
-	peerTxEnable := make(chan bool)             //Channel to enable
+	peerUpdateCh := make(chan peers.PeerUpdate) //channel for receiving IDs of alive peers
+	peerTxEnable := make(chan bool)
 
 	go peers.Transmitter(PeerPort, MyIP, peerTxEnable)
 	go peers.Receiver(PeerPort, peerUpdateCh)
@@ -98,84 +95,65 @@ func P2Pnet(
 	go bcast.Transmitter(port4, BCNewOrderTx)
 	go bcast.Transmitter(port5, BCP2PElevInfoTx)
 
-	// Broadcast Timer
-	//broadcastTimer := time.NewTimer(BroadcastRate)
 	recieveTimer := time.NewTimer(1)
 	recieveTimer.Stop()
 
 	for {
 		select {
-
-		// Print Peer Updates
 		case p := <-peerUpdateCh:
 			printPeerUpdate(p)
 			PeerList.Peers = p.Peers
-			// Broadcasting on network
 		case localState = <-TxElevInfoChan:
-			fmt.Printf("NET: Transmit local state::   %+v\n", localState)
+			//fmt.Printf("NET: Transmit local state::   %+v\n", localState)
 			BCLocalStateTx <- localState
 		case newHallReq = <-TxNewHallRequestChan:
-			fmt.Printf("NET: Transmit new hall req::   %+v\n", rxnewHallReq)
+			//fmt.Printf("NET: Transmit new hall req::   %+v\n", rxnewHallReq)
 			BCNewHallReqTx <- newHallReq
 		case finHallReq = <-TxFinishedHallOrderChan:
-			fmt.Printf("NET: Transmit finished hall order::   %+v\n", finHallReq)
+			//fmt.Printf("NET: Transmit finished hall order::   %+v\n", finHallReq)
 			BCFinHallOrderTx <- finHallReq
 		case newOrder = <-TxNewOrdersChan:
-			fmt.Printf("NET: Transmit new order::   %+v\n", newOrder)
+			//fmt.Printf("NET: Transmit new order::   %+v\n", newOrder)
 			BCNewOrderTx <- newOrder
 		case p2pElevInfo = <-TxP2PElevInfoChan:
-			fmt.Printf("NET: Transmit P2Pelevinfo::   %+v\n", p2pElevInfo)
+			//fmt.Printf("NET: Transmit P2Pelevinfo::   %+v\n", p2pElevInfo)
 			BCP2PElevInfoTx <- p2pElevInfo
-		/*case <-broadcastTimer.C:
-		fmt.Printf("NET: Broadcasting NOW\n")
-		BCLocalStateTx <- localState
-		BCNewHallReqTx <- newHallReq
-		BCFinHallOrderTx <- finHallReq
-		BCNewOrderTx <- newOrder
-		BCP2PElevInfoTx <- p2pElevInfo
-		broadcastTimer.Reset(BroadcastRate)*/
 
-		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
-			sort.Slice(rxP2pElevinfo, func(i, j int) bool {
+		case newrxP2pElevinfo := <-RecieveP2PElevInfo:
+			/*sort.Slice(rxP2pElevinfo, func(i, j int) bool {
 				return rxP2pElevinfo[i].ElevID < rxP2pElevinfo[j].ElevID
 			})
 			sort.Slice(newrxP2pElevinfo, func(i, j int) bool {
 				return newrxP2pElevinfo[i].ElevID < newrxP2pElevinfo[j].ElevID
 			})
-			if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {
-				rxP2pElevinfo = newrxP2pElevinfo
-				fmt.Printf("NET:P2Pelevinfo:: %+v\n", rxP2pElevinfo)
-				RxP2PElevInfoChan <- rxP2pElevinfo
-			}
+			if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {*/
+			rxP2pElevinfo = newrxP2pElevinfo
+			//fmt.Printf("NET:P2Pelevinfo:: %+v\n", rxP2pElevinfo)
+			RxP2PElevInfoChan <- rxP2pElevinfo
+			//}
 		case newrxnewHallReq := <-RecieveNewHallReqRx:
 			if rxnewHallReq != newrxnewHallReq {
 				rxnewHallReq = newrxnewHallReq
-				fmt.Printf("NET:newHallReq:: %+v\n", rxnewHallReq)
 				RxNewHallRequestChan <- rxnewHallReq
 			}
 		case newrxfinHallReq := <-RecieveFinHallOrderRx:
 			if rxfinHallReq != newrxfinHallReq {
 				rxfinHallReq = newrxfinHallReq
-				fmt.Printf("NET:FinHallReq:: %+v\n", rxfinHallReq)
 				RxFinishedHallOrderChan <- rxfinHallReq
 			}
 		case newrxLocalState := <-RecieveLocalStateRx:
 			if rxLocalState != newrxLocalState {
 				rxLocalState = newrxLocalState
-				fmt.Printf("NET:LocalState:: %+v\n", rxLocalState)
 				RxElevInfoChan <- rxLocalState
 			}
 		case newrxnewOrder := <-RecieveOrderRx:
-			//if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
 			rxnewOrder = newrxnewOrder
-			fmt.Printf("NET:NewOrder:: %+v\n", rxnewOrder)
 			RxNewOrdersChan <- rxnewOrder
-			//}
 		}
 	}
 }
 
-// -----  PUBLIC FUNCTIONS (P2P) ------ //
+// -----  PUBLIC FUNCTIONS (NETWORK) ------ //
 func printPeerUpdate(p peers.PeerUpdate) {
 	fmt.Printf("Peer update:\n")
 	fmt.Printf(" Peers:  %q\n", p.Peers)
@@ -232,7 +210,7 @@ func SendButtonPress(MyElev localTypes.LOCAL_ELEVATOR_INFO, btnpress localTypes.
 	}
 }
 
-// -----  PRIVATE FUNCTIONS (P2P) ------ //
+// -----  PRIVATE FUNCTIONS (NETWORK) ------ //
 func splitIPAddr(ip string) byte {
 	addr := net.ParseIP(ip).To4()
 	return addr[3]
