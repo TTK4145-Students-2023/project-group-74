@@ -40,13 +40,33 @@ func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 	}
 }
 
-func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
+func UpdateLocalInAllElevs(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
 	for i := 0; i < len(ForeignElevs); i++ {
 		if ForeignElevs[i].ElevID == MyElev.ElevID {
 			ForeignElevs[i] = MyElev
 		}
 	}
 	return ForeignElevs
+}
+
+func AddNewAllElevs(AllElevs localTypes.P2P_ELEV_INFO, NewAllElevs localTypes.P2P_ELEV_INFO)localTypes.P2P_ELEV_INFO{
+	combinedElevs := make(map[string]localTypes.LOCAL_ELEVATOR_INFO)
+
+    // Add elevators from both AllElevs and NewAllElevs to the combined map
+    for _, elevList := range [][]localTypes.LOCAL_ELEVATOR_INFO{AllElevs, NewAllElevs} {
+        for _, elev := range elevList {
+            if elev.IsValid() {
+                combinedElevs[elev.ElevID] = elev
+            }
+        }
+    }
+    // Convert the combined map back to a P2P_ELEV_INFO type
+    result := make(localTypes.P2P_ELEV_INFO, 0, len(combinedElevs))
+    for _, elev := range combinedElevs {
+        result = append(result, elev)
+    }
+
+    return result
 }
 
 func UpdateOrderLights(MyElev localTypes.LOCAL_ELEVATOR_INFO, CurrentHMatrix localTypes.HMATRIX) {

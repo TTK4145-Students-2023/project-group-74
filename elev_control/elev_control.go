@@ -31,33 +31,46 @@ func RunElevator(
 			ElevID:    myIP,
 		}
 
-	initializing := true
+	var MyOrders localTypes.HMATRIX
+	var CombinedHMatrix localTypes.HMATRIX
+	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
+	var dooropentimer *time.Timer
+	dooropentimer = time.NewTimer(time.Second * 1000)
+	dooropentimer.Stop()
 
+	initializing := true
+	elevio.SetDoorOpenLamp(false)
+	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+	elevio.SetMotorDirection(localTypes.DIR_down)
+	var initimer *time.Timer
+	initimer = time.NewTimer(time.Second * 3)
 	for initializing {
 		select {
+		case P2Pinfo := <-RxP2PElevInfoChan:
+			for i := 0; i < len(P2Pinfo); i++ {
+				if P2Pinfo[i].ElevID == MyElev.ElevID {
+					MyElev.CabCalls = P2Pinfo[i].CabCalls
+				}
+			}
+			fmt.Printf("\n\n\n\nNewp2p info in init \n\n\n")
+
 		case MyElev.Floor = <-NewFloorChan:
 			elevio.SetMotorDirection(localTypes.DIR_stop)
 			elevio.SetDoorOpenLamp(false)
 			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+
+		case <-initimer.C:
 			initializing = false
-			fmt.Printf("Initializing finished!\n")
+			fmt.Printf("\n\n\n\nInitializing finished!\n\n\n")
 		default:
-			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(localTypes.DIR_down)
+			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			time.Sleep(80 * time.Millisecond)
 		}
 	}
+
 	fmt.Printf("My Elev: %+v\n", MyElev)
-
-	var MyOrders localTypes.HMATRIX
-	var CombinedHMatrix localTypes.HMATRIX
-	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
-
-	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-
-	var dooropentimer *time.Timer
-	dooropentimer = time.NewTimer(time.Second * 1000)
-	dooropentimer.Stop()
+	AllElevs = elevio.UpdateLocalInAllElevs(MyElev, AllElevs)
+	TxP2PElevInfoChan <- AllElevs
 
 	for {
 		select {
@@ -65,7 +78,7 @@ func RunElevator(
 			if MyOrders != newOrder[MyElev.ElevID] {
 				MyOrders = newOrder[MyElev.ElevID]
 			}
-			fmt.Printf("Myorders %+v\n", MyOrders)
+			//fmt.Printf("Myorders %+v\n", MyOrders)
 			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
@@ -215,9 +228,11 @@ func RunElevator(
 			}
 			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
-		case AllElevs = <-RxP2PElevInfoChan:
+		case NewAllElevs := <-RxP2PElevInfoChan:
+			AllElevs = elevio.AddNewAllElevs(AllElevs, NewAllElevs)
+			AllElevs = elevio.UpdateLocalInAllElevs(MyElev, AllElevs)
+			fmt.Printf("\n\n\n\nrecieved this wonderful piece of information! \n\n\n")
 
-			AllElevs = elevio.AddLocalToForeignInfo(MyElev, AllElevs)
 			TxP2PElevInfoChan <- AllElevs
 		}
 	}

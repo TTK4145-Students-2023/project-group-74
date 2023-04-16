@@ -108,21 +108,16 @@ func P2Pnet(
 			localTypes.PeerList.Peers = p.Peers
 			// Broadcasting on network
 		case localState = <-TxElevInfoChan:
-			fmt.Printf("NET: Transmit local state::   %+v\n", localState)
 			BCLocalStateTx <- localState
 		case newHallReq = <-TxNewHallRequestChan:
 
-			fmt.Printf("NET: Transmit new hall req::   %+v\n", rxnewHallReq)
 			BCNewHallReqTx <- newHallReq
 
 		case finHallReq = <-TxFinishedHallOrderChan:
-			fmt.Printf("NET: Transmit finished hall order::   %+v\n", finHallReq)
 			BCFinHallOrderTx <- finHallReq
 		case newOrder = <-TxNewOrdersChan:
-			fmt.Printf("NET: Transmit new order::   %+v\n", newOrder)
 			BCNewOrderTx <- newOrder
 		case p2pElevInfo = <-TxP2PElevInfoChan:
-			fmt.Printf("NET: Transmit P2Pelevinfo::   %+v\n", p2pElevInfo)
 			BCP2PElevInfoTx <- p2pElevInfo
 		/*case <-broadcastTimer.C:
 		fmt.Printf("NET: Broadcasting NOW\n")
@@ -134,41 +129,40 @@ func P2Pnet(
 		broadcastTimer.Reset(BroadcastRate)*/
 
 		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
+
 			sort.Slice(rxP2pElevinfo, func(i, j int) bool {
 				return rxP2pElevinfo[i].ElevID < rxP2pElevinfo[j].ElevID
 			})
 			sort.Slice(newrxP2pElevinfo, func(i, j int) bool {
 				return newrxP2pElevinfo[i].ElevID < newrxP2pElevinfo[j].ElevID
 			})
+			fmt.Printf("\n\n\n\nNewp2p info in network pre check \n\n\n")
 			if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {
 				rxP2pElevinfo = newrxP2pElevinfo
-				fmt.Printf("NET:P2Pelevinfo:: %+v\n", rxP2pElevinfo)
 				RxP2PElevInfoChan <- rxP2pElevinfo
+				fmt.Printf("\n\n\n\nNewp2p info in network \n\n\n")
+
 			}
 		case newrxnewHallReq := <-RecieveNewHallReqRx:
 
 			if newrxnewHallReq.Floor != 4 {
 				rxnewHallReq = newrxnewHallReq
-				fmt.Printf("NET:RxnewHallReq:: %+v\n", rxnewHallReq)
 				RxNewHallRequestChan <- rxnewHallReq
 			}
 
 		case newrxfinHallReq := <-RecieveFinHallOrderRx:
 			if newrxfinHallReq.Floor != 4 {
 				rxfinHallReq = newrxfinHallReq
-				fmt.Printf("NET:FinHallReq:: %+v\n", rxfinHallReq)
 				RxFinishedHallOrderChan <- rxfinHallReq
 			}
 		case newrxLocalState := <-RecieveLocalStateRx:
 			if rxLocalState != newrxLocalState {
 				rxLocalState = newrxLocalState
-				fmt.Printf("NET:LocalState:: %+v\n", rxLocalState)
 				RxElevInfoChan <- rxLocalState
 			}
 		case newrxnewOrder := <-RecieveOrderRx:
 			//if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
 			rxnewOrder = newrxnewOrder
-			fmt.Printf("NET:NewOrder:: %+v\n", rxnewOrder)
 			RxNewOrdersChan <- rxnewOrder
 			//}
 		}
