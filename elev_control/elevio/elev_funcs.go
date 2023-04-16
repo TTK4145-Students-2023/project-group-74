@@ -51,6 +51,7 @@ func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs l
 }
 
 func UpdateLocalInAllElevs(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
+
 	added:=false
 	for i := 0; i < len(ForeignElevs); i++ {
 		if ForeignElevs[i].ElevID == MyElev.ElevID {

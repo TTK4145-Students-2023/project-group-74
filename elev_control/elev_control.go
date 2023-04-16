@@ -33,34 +33,51 @@ func RunElevator(
 			ElevID:    myIP,
 		}
 
+
+	var MyOrders localTypes.HMATRIX
+	var CombinedHMatrix localTypes.HMATRIX
+	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
+	TxP2PElevInfoChan <- AllElevs
+
+	var dooropentimer *time.Timer
+	dooropentimer = time.NewTimer(time.Second * 1000)
+	dooropentimer.Stop()
+	restored := false
+
 	initializing := true
 
 	for initializing {
 		select {
+
+		case P2Pinfo := <-RxP2PElevInfoChan:
+			if restored == false {
+				for i := 0; i < len(P2Pinfo); i++ {
+
+					if P2Pinfo[i].ElevID == MyElev.ElevID {
+						MyElev.CabCalls = P2Pinfo[i].CabCalls
+						restored = true
+						fmt.Printf("\nNewp2ppu into init \n")
+					}
+				}
+			}
+
+
 		case MyElev.Floor = <-NewFloorChan:
 			elevio.SetMotorDirection(localTypes.DIR_stop)
 			elevio.SetDoorOpenLamp(false)
 			network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 			initializing = false
-			fmt.Printf("Initializing finished!\n")
+
 		default:
 			elevio.SetDoorOpenLamp(false)
 			elevio.SetMotorDirection(localTypes.DIR_down)
 			time.Sleep(80 * time.Millisecond)
 		}
 	}
-	fmt.Printf("My Elev: %+v\n", MyElev)
-
-	var MyOrders localTypes.HMATRIX
-	var CombinedHMatrix localTypes.HMATRIX
-	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
 
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
-	var dooropentimer *time.Timer
-	dooropentimer = time.NewTimer(time.Second * 1000)
-	dooropentimer.Stop()
-
+	
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
@@ -171,7 +188,9 @@ func RunElevator(
 					if newBtnPress.Floor == MyElev.Floor {
 						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
 						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-						dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+						if !elevio.GetObstruction() {
+							dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+						}
 					}
 
 				case localTypes.Idle:
