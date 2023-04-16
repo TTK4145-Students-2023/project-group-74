@@ -1,9 +1,6 @@
 package localTypes
 
 import (
-	"net"
-	"project-group-74/network/subs/peers"
-	"strconv"
 	"time"
 )
 
@@ -93,12 +90,8 @@ func IsValidFloor(floor int) bool {
 	return floor >= 0 && floor <= NUM_FLOORS
 }
 
-func IsValidID(ID string) bool {
-	id, err := strconv.Atoi(ID)
-	if err != nil || id < 0 {
-		return false
-	}
-	return true
+func IsValidID(IP string) bool {
+	return IP != ""
 }
 
 func (state ELEVATOR_STATE) IsValid() bool {
@@ -131,62 +124,4 @@ func (loc_elev LOCAL_ELEVATOR_INFO) IsValid() bool {
 	return IsValidFloor(loc_elev.Floor) &&
 		loc_elev.Direction.IsValid() &&
 		loc_elev.State.IsValid()
-}
-
-//************ const for P2P ************
-
-const (
-	PeerPort  = 15699
-	StatePort = 16599
-)
-
-var MyIP string
-
-var PeerList peers.PeerUpdate
-
-// ----- FUNCTIONS (NETWORK) ------ //
-func splitIPAddr(ip string) byte {
-	addr := net.ParseIP(ip).To4()
-	return addr[3]
-}
-
-func IsMaster(MyIP string, Peers []string) bool {
-	if len(Peers) == 0 {
-		return true
-	}
-	lowestIP := Peers[0]
-	for _, ip := range Peers {
-		lastOctet := splitIPAddr(ip)
-		addrLowest := net.ParseIP(lowestIP).To4()
-		if lastOctet < addrLowest[3] {
-			lowestIP = ip
-		}
-	}
-	myIP := net.ParseIP(MyIP).To4()
-	lowestIP = string(net.ParseIP(lowestIP).To4())
-	return myIP[3] <= lowestIP[3]
-}
-
-func SendlocalElevInfo(MyElev LOCAL_ELEVATOR_INFO, RXchan chan<- LOCAL_ELEVATOR_INFO, TXchan chan<- LOCAL_ELEVATOR_INFO) {
-	if len(PeerList.Peers) == 0 {
-		RXchan <- MyElev
-	} else {
-		TXchan <- MyElev
-	}
-}
-
-func SendButtonInfo(MyElev LOCAL_ELEVATOR_INFO, btntype BUTTON_TYPE, RXButtonchan chan<- BUTTON_INFO, TXButtonchan chan<- BUTTON_INFO) {
-	if len(PeerList.Peers) == 0 {
-		RXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
-	} else {
-		TXButtonchan <- BUTTON_INFO{Floor: MyElev.Floor, Button: btntype}
-	}
-}
-
-func SendButtonPress(MyElev LOCAL_ELEVATOR_INFO, btnpress BUTTON_INFO, RXButtonchan chan<- BUTTON_INFO, TXButtonchan chan<- BUTTON_INFO) {
-	if len(PeerList.Peers) == 0 {
-		RXButtonchan <- btnpress
-	} else {
-		TXButtonchan <- btnpress
-	}
 }

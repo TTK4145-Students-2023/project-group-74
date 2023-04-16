@@ -4,7 +4,7 @@ import (
 	"project-group-74/localTypes"
 	"time"
 )
-
+// ----- PUBLIC FUNCTIONS (ELEVATOR FUNCTIONS)------ //
 func ArrivedAtOrder(
 	MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.LOCAL_ELEVATOR_INFO {
 
@@ -180,7 +180,7 @@ func AddNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
 	return CombinedHMatrix
 }
 
-// ----- PRIVATE FUNCTIONS ------ //
+// ----- PRIVATE FUNCTIONS (ELEVATOR FUNCTIONS)------ //
 func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRIX) [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool {
 	var result [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool
 	for i := 0; i < localTypes.NUM_FLOORS; i++ {
@@ -192,13 +192,3 @@ func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATR
 	return result
 }
 
-func dir2Btntype(dir localTypes.MOTOR_DIR) localTypes.BUTTON_TYPE {
-	if dir == localTypes.DIR_up {
-		return localTypes.Button_hall_up
-	} else if dir == localTypes.DIR_down {
-		return localTypes.Button_hall_down
-	} else if dir == localTypes.DIR_stop {
-		return localTypes.Button_Cab
-	}
-	panic("No mototdir found???")
-}
