@@ -14,7 +14,7 @@ The Elevator Project requires creating software that can control multiple elevat
 Additionally, the system should distribute calls across elevators in a way that maximizes efficiency. 
 
 ## Module description
-The program is written in ```GO```, because it is a compiled language with a strong type system, which makes it efficient and performant. Additionally, GO has built-in support for concurrency and parallelism, which can be useful for controlling multiple elevators in a building. GO also has a large standard library that includes networking and serialization capabilities, making it easy to communicate with other components of the elevator system. Finally, GO's simple and concise syntax can make it easier to write and maintain code, especially for large projects like an elevator system.
+The program is written in ```GO```, because it is a compiled language with a strong type system, which makes it efficient and performant. Additionally, ```GO``` has built-in support for concurrency and parallelism, which can be useful for controlling multiple elevators in a building. ```GO``` also has a large standard library that includes networking and serialization capabilities, making it easy to communicate with other components of the elevator system. Finally, ```GO's``` simple and concise syntax can make it easier to write and maintain code, especially for large projects like an elevator system.
 
 Multiple of the projects modules have auxiliary functionality and are defined inside the same folder. 
 
