@@ -188,7 +188,9 @@ func RunElevator(
 					if newBtnPress.Floor == MyElev.Floor {
 						MyElev.CabCalls = elevio.RemoveOneOrderBtn(newBtnPress, MyElev)
 						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-						dooropentimer.Reset(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+						if !elevio.GetObstruction() {
+							dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
+						}
 					}
 
 				case localTypes.Idle:
