@@ -1,4 +1,3 @@
-
 package decision_io
 
 import (
@@ -6,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"project-group-74/localTypes"
+)
 
 func NewAllFalseHRAInput() localTypes.HRAInput {
 	output := localTypes.HRAInput{}
@@ -23,7 +23,6 @@ func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[s
 	if err != nil {
 		fmt.Println("json.Marshal error: ", err)
 	}
-
 
 	ret, err := exec.Command("orderAssigner/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
 

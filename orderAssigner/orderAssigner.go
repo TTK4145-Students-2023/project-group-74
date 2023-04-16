@@ -1,7 +1,7 @@
-
 package orderAssigner
 
 import (
+	"fmt"
 	"project-group-74/localTypes"
 	"project-group-74/network"
 	"project-group-74/orderAssigner/decision_io"
@@ -16,10 +16,9 @@ func OrderAssigner(
 	RxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
 	TxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
 	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
-	TxHRAInputChan <-chan localTypes.HRAInput,
-  RxHRAInputChan <-chan localTypes.HRAInput,
-	LostElevChan <-chan []string,) {
-
+	TxHRAInputChan chan<- localTypes.HRAInput,
+	RxHRAInputChan <-chan localTypes.HRAInput,
+	LostElevChan <-chan []string) {
 
 	hraExecutable := ""
 	switch runtime.GOOS {
@@ -31,9 +30,8 @@ func OrderAssigner(
 		panic("OS not supported")
 	}
 
-
 	currentHRAInput := decision_io.NewAllFalseHRAInput()
-  restored := false
+	restored := false
 	initializing := true
 	var initimer *time.Timer
 	initimer = time.NewTimer(time.Second * 3)
@@ -65,7 +63,7 @@ func OrderAssigner(
 			if network.IsMaster(network.MyIP, network.PeerList.Peers) {
 				newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 				network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
-			}else {
+			} else {
 				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
 				fmt.Printf("\n non blocking\n")
@@ -80,13 +78,13 @@ func OrderAssigner(
 				if network.IsMaster(network.MyIP, network.PeerList.Peers) {
 					newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 					network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
-				}else {
-				fmt.Printf("\n pre blocking\n")
-				TxHRAInputChan <- currentHRAInput
-				fmt.Printf("\n non blocking\n")
+				} else {
+					fmt.Printf("\n pre blocking\n")
+					TxHRAInputChan <- currentHRAInput
+					fmt.Printf("\n non blocking\n")
+				}
 			}
-			}
-      
+
 		case finHallOrder := <-RxFinishedHallOrderChan:
 			if !(localTypes.IsValidFloor(finHallOrder.Floor)) || !(finHallOrder.Button.IsValid()) {
 				panic("Corrupt elevator data from RxFinishedHallOrderChan to Order Assigner")
@@ -95,26 +93,26 @@ func OrderAssigner(
 			if network.IsMaster(network.MyIP, network.PeerList.Peers) {
 				newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 				network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
-			}else {
+			} else {
 				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
 				fmt.Printf("\n non blocking\n")
 			}
-      case lostElev := <-LostElevChan:
+		case lostElev := <-LostElevChan:
 			for _, len := range lostElev {
-				if len != localTypes.MyIP {
+				if len != network.MyIP {
 					delete(currentHRAInput.States, len)
 				}
 			}
-      	if network.IsMaster(network.MyIP, network.PeerList.Peers) {
+			if network.IsMaster(network.MyIP, network.PeerList.Peers) {
 				newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 				network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
-			}else {
+			} else {
 				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
 				fmt.Printf("\n non blocking\n")
 			}
-      case <-RxHRAInputChan:
+		case <-RxHRAInputChan:
 			time.Sleep((time.Millisecond * 100))
 
 		default:
