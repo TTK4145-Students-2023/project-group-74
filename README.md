@@ -1,8 +1,44 @@
-This code is a triple threat, quite literally! It runs not one, not two, but THREE elevators. That's right, three times the fun, three times the excitement, and three times the potential for awkward elevator small talk.
+# Elevator project - TTK4145
 
-But fear not, this code is no joke. It's been rigorously tested to ensure smooth operation and minimal wait times. You'll never have to worry about being stuck in a cramped elevator with that one person who insists on sharing their life story (we all know that person).
+## Table of contents
+* [General info](#general-info)
+* [Module description](#module-description)
+* [Setup](#setup)
 
-So come on, hop on board and let this code take you to new heights (literally). And who knows, maybe you'll even make a new elevator buddy or two. Just remember to keep the conversations light and fluffy, like the clouds you'll be soaring above. Happy elevator riding!
+## General info
+The Elevator Project requires creating software that can control multiple elevators operating in parallel across multiple floors. The main requirements include: 
+* Ensuring that no calls are lost
+* Handling failure states that prevent communication between elevators or servicing of calls
+* Providing sensible and efficient behavior for each elevator. 
+
+Additionally, the system should distribute calls across elevators in a way that maximizes efficiency. 
+
+## Module description
+* ### Order Assigner 
+Whenever new data enters the system, such as a new request or an update on an elevator's state, the order assigner redistributes all hall requests. This ensures that requests are assigned to different elevators at different times, promoting efficient use of the system. To maintain consistency across all elevators, a single ```MASTER``` elevator calculates the distribution using a cost function executable downloaded from the course ```Project resources```. The cost function takes into account the elevator's behavior (```idle```, ```moving```, or ```door_open```), current ```floor```, ```direction``` of travel, and current ```cab``` requests. The output of the algorithm provides updated hall requests for each elevator in the form of a list of pairs of Boolean values, indicating whether there is an ```hall_up``` or ```hall_down``` request at each floor.
+
+* ### Network 
+The system employs both ```MASTER/SLAVE``` and ```PEER-TO-PEER``` functionalities. The ```MASTER/SLAVE``` function ensures that only one elevator is in charge and instructs the others on what tasks to perform, specifically the distribution of orders among the elevators. On the other hand, the ```PEER-TO-PEER``` function is utilized to share "elevator-state" information among the elevators. This enables all elevators to retain the other elevators' data in case an elevator returns to the network after being offline for any reason.
+
+* ### Elevator Control 
+* ### Local Types 
+	
+## Setup
+To run this project, install it locally using npm:
+
+```
+$ cd ../lorem
+$ npm install
+$ npm start
+```
+
+
+
+Overview of the task 
+
+Description of the modules
+
+Other code used
 
 KLADD beskrivelse av moduler: 
 /*
