@@ -1,12 +1,12 @@
 package main
 
 import (
-	"project-group-74/decision"
 	"project-group-74/elev_control"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
 	"project-group-74/network"
 	"project-group-74/network/subs/localip"
+	"project-group-74/orderAssigner"
 )
 
 func main() {
@@ -29,8 +29,10 @@ func main() {
 	NewBtnPressChan := make(chan localTypes.BUTTON_INFO, 10)
 	NewFloorChan := make(chan int, 10)
 	ObstructionChan := make(chan bool, 10)
+	LostElevChan := make(chan []string, 10)
 
 	TxHRAInputChan := make(chan localTypes.HRAInput, 10)
+	RxHRAInputChan := make(chan localTypes.HRAInput, 10)
 
 	elevio.Init("localhost:15657", localTypes.NUM_FLOORS)
 
@@ -46,7 +48,11 @@ func main() {
 		TxNewOrdersChan,
 		RxNewOrdersChan,
 		TxP2PElevInfoChan,
-		RxP2PElevInfoChan)
+		RxP2PElevInfoChan,
+		TxHRAInputChan,
+		RxHRAInputChan,
+		LostElevChan,
+	)
 
 	go elev_control.RunElevator(myIP,
 		TxElevInfoChan,
@@ -63,13 +69,16 @@ func main() {
 		ObstructionChan,
 	)
 
-	go decision.OrderAssigner(
+	go orderAssigner.OrderAssigner(
 		RxElevInfoChan,
 		RxNewHallRequestChan,
 		RxFinishedHallOrderChan,
 		TxNewOrdersChan,
 		RxNewOrdersChan,
-		TxHRAInputChan)
+		TxHRAInputChan,
+		RxHRAInputChan,
+		LostElevChan,
+	)
 
 	go elevio.PollButtons(NewBtnPressChan)
 	go elevio.PollFloorSensor(NewFloorChan)
