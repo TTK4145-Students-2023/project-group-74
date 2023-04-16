@@ -39,7 +39,7 @@ func OrderAssigner(
 	for initializing {
 		select {
 		case NewHRAInput := <-RxHRAInputChan:
-			if restored == false {
+			if !restored{
 				currentHRAInput = NewHRAInput
 				restored = true
 				fmt.Printf("\nNew HRAInput into init \n")
@@ -74,8 +74,10 @@ func OrderAssigner(
 					fmt.Printf("New Orders from newelevinfo: %s: %v\n", k, v)
 				}*/
 				//}
-			}
+			}else{
+			fmt.Printf("\n pre blocking\n")
 			TxHRAInputChan <- currentHRAInput
+			fmt.Printf("\n non blocking\n")}
 
 		case newHRequest := <-RxNewHallRequestChan:
 			//if !isValidFloor(newHRequest.Floor) || newHRequest.Button !isValid(){
@@ -99,8 +101,10 @@ func OrderAssigner(
 					}
 					//}
 				}
-			}
-			TxHRAInputChan <- currentHRAInput
+				}else{
+					fmt.Printf("\n pre blocking\n")
+					TxHRAInputChan <- currentHRAInput
+					fmt.Printf("\n non blocking\n")}
 
 		case finishedHOrder := <-RxFinishedHallOrderChan:
 			//if !isValidFloor(finishedHOrder.Floor) || finishedHOrder.Button !isValid(){
@@ -122,8 +126,11 @@ func OrderAssigner(
 				fmt.Printf("New Orders finhallreq: %+v\n", newOrders)
 				//}
 				//}
-			}
-			TxHRAInputChan <- currentHRAInput
+				}else{
+					fmt.Printf("\n pre blocking\n")
+					TxHRAInputChan <- currentHRAInput
+					fmt.Printf("\n non blocking\n")}
+
 			/*
 				case <-OAticker.C:
 					if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
