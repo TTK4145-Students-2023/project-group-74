@@ -1,4 +1,6 @@
-package DLOCC
+
+package decision_io
+
 
 import (
 	"project-group-74/localTypes"
@@ -6,7 +8,6 @@ import (
 )
 
 const ORDER_WATCHDOG_POLL_RATE = 50 * time.Millisecond
-
 
 var motorDirStrings = map[localTypes.MOTOR_DIR]string{
 	localTypes.DIR_down: "down",

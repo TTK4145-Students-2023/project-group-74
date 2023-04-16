@@ -1,12 +1,12 @@
 package main
 
 import (
-	"project-group-74/decision"
 	"project-group-74/elev_control"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
 	"project-group-74/network"
 	"project-group-74/network/subs/localip"
+	"project-group-74/orderAssigner"
 )
 
 func main() {
@@ -69,7 +69,7 @@ func main() {
 		ObstructionChan,
 	)
 
-	go decision.OrderAssigner(
+	go orderAssigner.OrderAssigner(
 		RxElevInfoChan,
 		RxNewHallRequestChan,
 		RxFinishedHallOrderChan,

@@ -1,51 +1,11 @@
-package DLOCC
+
+package decision_io
 
 import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"project-group-74/localTypes"
-	"time"
-)
-
-func orderWatchdog(
-	orderActivatedChn <-chan localTypes.BUTTON_INFO,
-	orderDeactivatedChn <-chan localTypes.BUTTON_INFO,
-	orderTimedOutChn chan<- localTypes.BUTTON_INFO) {
-
-	var orderTimeouts [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]time.Time
-	var zeroTime = time.Time{}
-	pollOrderTimeoutsTicker := time.NewTicker(localTypes.ORDER_WATCHDOG_POLL_RATE)
-
-	for {
-		select {
-		case order := <-orderActivatedChn:
-			timeout := orderTimeouts[order.Floor][order.Button]
-			if timeout.IsZero() {
-				orderTimeouts[order.Floor][order.Button] = time.Now().Add(localTypes.MAX_TIME_TO_FINISH_ORDER)
-			}
-
-		case order := <-orderDeactivatedChn:
-			orderTimeouts[order.Floor][order.Button] = zeroTime
-
-		case <-pollOrderTimeoutsTicker.C:
-			for floor := 0; floor < localTypes.NUM_FLOORS; floor++ {
-				for button := 0; button < localTypes.NUM_BUTTONS; button++ {
-					timeout := orderTimeouts[floor][button]
-
-					if !timeout.IsZero() && timeout.Before(time.Now()) {
-						orderTimeouts[floor][button] = zeroTime
-						var order localTypes.BUTTON_INFO
-						order.Floor = floor
-						order.Button = localTypes.BUTTON_TYPE(button)
-
-						orderTimedOutChn <- order
-					}
-				}
-			}
-		}
-	}
-}
 
 func NewAllFalseHRAInput() localTypes.HRAInput {
 	output := localTypes.HRAInput{}
@@ -64,7 +24,9 @@ func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[s
 		fmt.Println("json.Marshal error: ", err)
 	}
 
-	ret, err := exec.Command("decision/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+
+	ret, err := exec.Command("orderAssigner/"+hraExecutable, "-i", string(jsonBytes)).CombinedOutput()
+
 	if err != nil {
 		fmt.Println("exec.Command error: ", err)
 		fmt.Println(string(ret))
@@ -80,18 +42,11 @@ func ReassignOrders(newHRAInput localTypes.HRAInput, hraExecutable string) map[s
 
 func LocalState2HRASTATE(newElevInfo localTypes.LOCAL_ELEVATOR_INFO) localTypes.HRAElevState {
 	output := localTypes.HRAElevState{
-		State:       getElevStateString(newElevInfo.State),
+
+		State:       elevStateStrings[newElevInfo.State],
 		Floor:       newElevInfo.Floor,
-		Direction:   getMotorDirString(newElevInfo.Direction),
+		Direction:   motorDirStrings[newElevInfo.Direction],
 		CabRequests: newElevInfo.CabCalls,
 	}
 	return output
-}
-
-func getMotorDirString(md localTypes.MOTOR_DIR) string {
-	return motorDirStrings[md]
-}
-
-func getElevStateString(state localTypes.ELEVATOR_STATE) string {
-	return elevStateStrings[state]
 }

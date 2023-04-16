@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// ----- PUBLIC FUNCTIONS (ELEVATOR FUNCTIONS)------ //
 func ArrivedAtOrder(
 	MyElev localTypes.LOCAL_ELEVATOR_INFO) localTypes.LOCAL_ELEVATOR_INFO {
 
@@ -40,15 +41,25 @@ func IsOrderAtFloor(MyElev localTypes.LOCAL_ELEVATOR_INFO, MyOrders localTypes.H
 	}
 }
 
-func UpdateLocalInAllElevs(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
-	added := false
+func AddLocalToForeignInfo(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
 	for i := 0; i < len(ForeignElevs); i++ {
 		if ForeignElevs[i].ElevID == MyElev.ElevID {
 			ForeignElevs[i] = MyElev
-			added = true
 		}
 	}
-	if !added {
+	return ForeignElevs
+}
+
+func UpdateLocalInAllElevs(MyElev localTypes.LOCAL_ELEVATOR_INFO, ForeignElevs localTypes.P2P_ELEV_INFO) localTypes.P2P_ELEV_INFO {
+
+	added:=false
+	for i := 0; i < len(ForeignElevs); i++ {
+		if ForeignElevs[i].ElevID == MyElev.ElevID {
+			ForeignElevs[i] = MyElev
+			added=true
+		}
+	}
+	if !added{
 		ForeignElevs = append(ForeignElevs, MyElev)
 	}
 	return ForeignElevs
@@ -205,7 +216,7 @@ func AddNewOrdersToHMatrix(newOrder localTypes.ORDER) localTypes.HMATRIX {
 	return CombinedHMatrix
 }
 
-// ----- PRIVATE FUNCTIONS ------ //
+// ----- PRIVATE FUNCTIONS (ELEVATOR FUNCTIONS)------ //
 func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATRIX) [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool {
 	var result [localTypes.NUM_FLOORS][localTypes.NUM_BUTTONS]bool
 	for i := 0; i < localTypes.NUM_FLOORS; i++ {
@@ -215,15 +226,4 @@ func combineOrders(MyCabs [localTypes.NUM_FLOORS]bool, MyOrders localTypes.HMATR
 		}
 	}
 	return result
-}
-
-func dir2Btntype(dir localTypes.MOTOR_DIR) localTypes.BUTTON_TYPE {
-	if dir == localTypes.DIR_up {
-		return localTypes.Button_hall_up
-	} else if dir == localTypes.DIR_down {
-		return localTypes.Button_hall_down
-	} else if dir == localTypes.DIR_stop {
-		return localTypes.Button_Cab
-	}
-	panic("No mototdir found???")
 }
