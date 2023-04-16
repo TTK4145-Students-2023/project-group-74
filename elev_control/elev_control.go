@@ -33,7 +33,6 @@ func RunElevator(
 			ElevID:    myIP,
 		}
 
-
 	var MyOrders localTypes.HMATRIX
 	var CombinedHMatrix localTypes.HMATRIX
 	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
@@ -42,49 +41,52 @@ func RunElevator(
 	var dooropentimer *time.Timer
 	dooropentimer = time.NewTimer(time.Second * 1000)
 	dooropentimer.Stop()
-	restored := false
+	elevio.SetDoorOpenLamp(false)
+	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+	elevio.SetMotorDirection(localTypes.DIR_down)
 
+	restored := false
 	initializing := true
+	initimer := time.NewTimer(3 * time.Second)
 
 	for initializing {
 		select {
-
 		case P2Pinfo := <-RxP2PElevInfoChan:
-			if restored == false {
+			if !restored {
 				for i := 0; i < len(P2Pinfo); i++ {
-
 					if P2Pinfo[i].ElevID == MyElev.ElevID {
 						MyElev.CabCalls = P2Pinfo[i].CabCalls
 						restored = true
-						fmt.Printf("\nNewp2ppu into init \n")
 					}
 				}
 			}
-
 
 		case MyElev.Floor = <-NewFloorChan:
 			elevio.SetMotorDirection(localTypes.DIR_stop)
 			elevio.SetDoorOpenLamp(false)
 			network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+			elevio.SetFloorIndicator(MyElev.Floor)
+
+		case <-initimer.C:
 			initializing = false
+			fmt.Printf("\n\n\nELEV CONTROL INITIALIZED\n\n\n")
 
 		default:
-			elevio.SetDoorOpenLamp(false)
-			elevio.SetMotorDirection(localTypes.DIR_down)
+			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 			time.Sleep(80 * time.Millisecond)
 		}
 	}
 
 	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+	AllElevs = elevio.UpdateLocalInAllElevs(MyElev, AllElevs)
+	TxP2PElevInfoChan <- AllElevs
 
-	
 	for {
 		select {
 		case newOrder := <-RxNewOrdersChan:
 			if MyOrders != newOrder[MyElev.ElevID] {
 				MyOrders = newOrder[MyElev.ElevID]
 			}
-			fmt.Printf("Myorders %+v\n", MyOrders)
 			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 

@@ -33,26 +33,26 @@ func OrderAssigner(
 	currentHRAInput := decision_io.NewAllFalseHRAInput()
 	restored := false
 	initializing := true
-	var initimer *time.Timer
-	initimer = time.NewTimer(time.Second * 3)
+	initimer := time.NewTimer(3 * time.Second)
+
 	for initializing {
 		select {
 		case NewHRAInput := <-RxHRAInputChan:
 			if !restored {
 				currentHRAInput = NewHRAInput
 				restored = true
-				fmt.Printf("\nNew HRAInput into init \n")
 			}
-			fmt.Printf("\nNew HRAInput into init \n")
 
 		case <-initimer.C:
 			initializing = false
-			fmt.Printf("\n\n\n\nInitializing finished OA!\n\n\n")
+			fmt.Printf("\n\n\n\nORDERASSIGNER INITIALIZED\n\n\n")
+
 		default:
 			time.Sleep(80 * time.Millisecond)
 
 		}
 	}
+	
 	for {
 		select {
 		case ElevInfo := <-RxElevInfoChan:
@@ -64,9 +64,7 @@ func OrderAssigner(
 				newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 				network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
 			} else {
-				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
-				fmt.Printf("\n non blocking\n")
 			}
 
 		case HallRequest := <-RxHallRequestChan:
@@ -79,9 +77,7 @@ func OrderAssigner(
 					newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 					network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
 				} else {
-					fmt.Printf("\n pre blocking\n")
 					TxHRAInputChan <- currentHRAInput
-					fmt.Printf("\n non blocking\n")
 				}
 			}
 
@@ -94,9 +90,7 @@ func OrderAssigner(
 				newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 				network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
 			} else {
-				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
-				fmt.Printf("\n non blocking\n")
 			}
 		case lostElev := <-LostElevChan:
 			for _, len := range lostElev {
@@ -108,9 +102,7 @@ func OrderAssigner(
 				newOrders := decision_io.ReassignOrders(currentHRAInput, hraExecutable)
 				network.SendNewOrders(newOrders, RxNewOrdersChan, TxNewOrdersChan)
 			} else {
-				fmt.Printf("\n pre blocking\n")
 				TxHRAInputChan <- currentHRAInput
-				fmt.Printf("\n non blocking\n")
 			}
 		case <-RxHRAInputChan:
 			time.Sleep((time.Millisecond * 100))

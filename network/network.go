@@ -84,7 +84,6 @@ func P2Pnet(
 		}
 		MyIP = localIP
 	}
-	fmt.Printf(" NETWORK RUNNING\n")
 
 	peerUpdateCh := make(chan peers.PeerUpdate) //channel for receiving IDs of alive peers
 	peerTxEnable := make(chan bool)

@@ -35,7 +35,6 @@ func Init(addr string, numFloors int) {
 }
 
 func PollButtons(receiver chan<- localTypes.BUTTON_INFO) {
-	fmt.Printf(" POLLBUTTONS RUNNING \n")
 
 	prev := make([][3]bool, _numFloors)
 	for {
@@ -55,7 +54,6 @@ func PollButtons(receiver chan<- localTypes.BUTTON_INFO) {
 }
 
 func PollFloorSensor(receiver chan<- int) {
-	fmt.Printf(" POLLFLOOR RUNNING ")
 
 	prev := -1
 	for {
@@ -63,7 +61,6 @@ func PollFloorSensor(receiver chan<- int) {
 		v := GetFloor()
 		if v != prev && v != -1 {
 			receiver <- v
-			fmt.Printf("New Floor: %v \n", v)
 		}
 		prev = v
 
