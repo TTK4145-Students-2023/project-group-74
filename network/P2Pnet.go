@@ -6,8 +6,6 @@ import (
 	"project-group-74/network/subs/bcast"
 	"project-group-74/network/subs/localip"
 	"project-group-74/network/subs/peers"
-	"reflect"
-	"sort"
 	"time"
 )
 
@@ -130,19 +128,18 @@ func P2Pnet(
 
 		case newrxP2pElevinfo := <-RecieveP2PElevInfo: // Legge på sender ID?
 
-			sort.Slice(rxP2pElevinfo, func(i, j int) bool {
+			/*sort.Slice(rxP2pElevinfo, func(i, j int) bool {
 				return rxP2pElevinfo[i].ElevID < rxP2pElevinfo[j].ElevID
 			})
 			sort.Slice(newrxP2pElevinfo, func(i, j int) bool {
 				return newrxP2pElevinfo[i].ElevID < newrxP2pElevinfo[j].ElevID
-			})
-			fmt.Printf("\n\n\n\nNewp2p info in network pre check \n\n\n")
-			if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {
-				rxP2pElevinfo = newrxP2pElevinfo
-				RxP2PElevInfoChan <- rxP2pElevinfo
-				fmt.Printf("\n\n\n\nNewp2p info in network \n\n\n")
+			})*/
+			//if !reflect.DeepEqual(rxP2pElevinfo, newrxP2pElevinfo) {
+			rxP2pElevinfo = newrxP2pElevinfo
 
-			}
+			RxP2PElevInfoChan <- rxP2pElevinfo
+
+		//	}
 		case newrxnewHallReq := <-RecieveNewHallReqRx:
 
 			if newrxnewHallReq.Floor != 4 {

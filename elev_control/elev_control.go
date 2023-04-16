@@ -34,6 +34,8 @@ func RunElevator(
 	var MyOrders localTypes.HMATRIX
 	var CombinedHMatrix localTypes.HMATRIX
 	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
+	TxP2PElevInfoChan <- AllElevs
+	restored := false
 	var dooropentimer *time.Timer
 	dooropentimer = time.NewTimer(time.Second * 1000)
 	dooropentimer.Stop()
@@ -47,12 +49,17 @@ func RunElevator(
 	for initializing {
 		select {
 		case P2Pinfo := <-RxP2PElevInfoChan:
-			for i := 0; i < len(P2Pinfo); i++ {
-				if P2Pinfo[i].ElevID == MyElev.ElevID {
-					MyElev.CabCalls = P2Pinfo[i].CabCalls
+			if restored == false {
+				for i := 0; i < len(P2Pinfo); i++ {
+					fmt.Printf("\n elevinfo in p2p info %+v \n", P2Pinfo[i])
+
+					if P2Pinfo[i].ElevID == MyElev.ElevID {
+						MyElev.CabCalls = P2Pinfo[i].CabCalls
+						restored = true
+						fmt.Printf("\nNewp2ppu into init \n")
+					}
 				}
 			}
-			fmt.Printf("\n\n\n\nNewp2p info in init \n\n\n")
 
 		case MyElev.Floor = <-NewFloorChan:
 			elevio.SetMotorDirection(localTypes.DIR_stop)
@@ -231,8 +238,6 @@ func RunElevator(
 		case NewAllElevs := <-RxP2PElevInfoChan:
 			AllElevs = elevio.AddNewAllElevs(AllElevs, NewAllElevs)
 			AllElevs = elevio.UpdateLocalInAllElevs(MyElev, AllElevs)
-			fmt.Printf("\n\n\n\nrecieved this wonderful piece of information! \n\n\n")
-
 			TxP2PElevInfoChan <- AllElevs
 		}
 	}
