@@ -1,6 +1,8 @@
 package localTypes
 
 import (
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -90,8 +92,18 @@ func IsValidFloor(floor int) bool {
 	return floor >= 0 && floor <= NUM_FLOORS
 }
 
-func IsValidID(IP string) bool {
-	return IP != ""
+func IsValidID(ip string) bool {
+	octets := strings.Split(ip, ".")
+	if len(octets) != 4 {
+		return false
+	}
+	for _, octet := range octets {
+		num, err := strconv.Atoi((octet))
+		if err != nil || num < 0 || num > 255 {
+			return false
+		}
+	}
+	return true
 }
 
 func (state ELEVATOR_STATE) IsValid() bool {
