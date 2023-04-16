@@ -100,6 +100,7 @@ func OrderAssigner(
 					//}
 				}
 			}
+			TxHRAInputChan <- currentHRAInput
 
 		case finishedHOrder := <-RxFinishedHallOrderChan:
 			//if !isValidFloor(finishedHOrder.Floor) || finishedHOrder.Button !isValid(){
@@ -122,6 +123,7 @@ func OrderAssigner(
 				//}
 				//}
 			}
+			TxHRAInputChan <- currentHRAInput
 			/*
 				case <-OAticker.C:
 					if localTypes.IsMaster(localTypes.MyIP, localTypes.PeerList.Peers) {
