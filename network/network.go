@@ -1,81 +1,183 @@
 package network
 
 import (
-	"flag"
 	"fmt"
-	"os"
+	"project-group-74/localTypes"
 	"project-group-74/network/subs/bcast"
 	"project-group-74/network/subs/localip"
 	"project-group-74/network/subs/peers"
 	"time"
 )
 
-// We define some custom struct to send over the network.
-// Note that all members we want to transmit must be public. Any private members
-//  will be received as zero-values.
-type HelloMsg struct{
-	Message string
-	Iter int 
-}
+// ************ const for P2P ************
+const (
+	PeerPort      = 15699
+	Port1         = 16599
+	Port2         = 17000
+	port3         = 18000
+	port4         = 19000
+	port5         = 20000
+	port6         = 21000
+	BroadcastRate = 100 * time.Millisecond
+)
 
-func Main(){
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
+// ************** main P2P func *************
+func P2Pnet(
+	TxElevInfoChan <-chan localTypes.LOCAL_ELEVATOR_INFO,
+	RxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO,
+	TxNewHallRequestChan <-chan localTypes.BUTTON_INFO,
+	RxNewHallRequestChan chan<- localTypes.BUTTON_INFO,
+	TxFinishedHallOrderChan <-chan localTypes.BUTTON_INFO,
+	RxFinishedHallOrderChan chan<- localTypes.BUTTON_INFO,
+	TxNewOrdersChan <-chan map[string]localTypes.HMATRIX,
+	RxNewOrdersChan chan<- map[string]localTypes.HMATRIX,
+	TxP2PElevInfoChan <-chan localTypes.P2P_ELEV_INFO,
+	RxP2PElevInfoChan chan<- localTypes.P2P_ELEV_INFO,
+	TxHRAInputChan <-chan localTypes.HRAInput,
+	RxHRAInputChan chan<- localTypes.HRAInput,
+	LostElevChan chan<- []string) {
 
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
-	if id == "" {
+	var (
+		// Tx var
+		p2pElevInfo = localTypes.P2P_ELEV_INFO{}
+		newHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
+		finHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
+		localState  = localTypes.LOCAL_ELEVATOR_INFO{}
+		newOrder    = map[string]localTypes.HMATRIX{}
+		newHRAInput = localTypes.HRAInput{}
+		// Rx var
+		rxP2pElevinfo = localTypes.P2P_ELEV_INFO{}
+		rxnewHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
+		rxfinHallReq  = localTypes.BUTTON_INFO{Floor: 4, Button: localTypes.Button_Cab}
+		rxLocalState  = localTypes.LOCAL_ELEVATOR_INFO{}
+		rxnewOrder    = map[string]localTypes.HMATRIX{}
+		rxnewHRAInput = localTypes.HRAInput{}
+
+		// Tx chan
+		BCLocalStateTx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
+		BCNewHallReqTx   = make(chan localTypes.BUTTON_INFO)
+		BCFinHallOrderTx = make(chan localTypes.BUTTON_INFO)
+		BCNewOrderTx     = make(chan map[string]localTypes.HMATRIX)
+		BCP2PElevInfoTx  = make(chan localTypes.P2P_ELEV_INFO)
+		BCNewHRAInput    = make(chan localTypes.HRAInput)
+		// Rx chan
+		RecieveLocalStateRx   = make(chan localTypes.LOCAL_ELEVATOR_INFO)
+		RecieveNewHallReqRx   = make(chan localTypes.BUTTON_INFO)
+		RecieveFinHallOrderRx = make(chan localTypes.BUTTON_INFO)
+		RecieveOrderRx        = make(chan map[string]localTypes.HMATRIX)
+		RecieveP2PElevInfo    = make(chan localTypes.P2P_ELEV_INFO)
+		RecieveNewHRAInput    = make(chan localTypes.HRAInput)
+	)
+
+	if localTypes.MyIP == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
 			fmt.Println(err)
-			localIP = "DISCONNECTED"
+			localIP = "No IP available"
 		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
+		localTypes.MyIP = localIP
 	}
+	fmt.Printf(" NETWORK RUNNING\n")
 
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
+	peerUpdateCh := make(chan peers.PeerUpdate) //We make a channel for receiving updates on the id's of the peers that are alive on the network
+	peerTxEnable := make(chan bool)             //Channel to enable
 
-	// We make channels for sending and receiving our custom data types
-	helloTx := make(chan HelloMsg)
-	helloRx := make(chan HelloMsg)
-	// ... and start the transmitter/receiver pair on some port
-	// These functions can take any number of channels! It is also possible to
-	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx)
-	go bcast.Receiver(16569, helloRx)
+	go peers.Transmitter(PeerPort, localTypes.MyIP, peerTxEnable)
+	go peers.Receiver(PeerPort, peerUpdateCh)
 
-	// The example message. We just send one of these every second.
-	go func() {
-		helloMsg := HelloMsg{"Hello from " + id, 0}
-		for {
-			helloMsg.Iter++
-			helloTx <- helloMsg
-			time.Sleep(1 * time.Second)
-		}
-	}()
+	// GoRoutines to recieve from NTW
+	go bcast.Receiver(Port1, RecieveLocalStateRx)
+	go bcast.Receiver(Port2, RecieveNewHallReqRx)
+	go bcast.Receiver(port3, RecieveFinHallOrderRx)
+	go bcast.Receiver(port4, RecieveOrderRx)
+	go bcast.Receiver(port5, RecieveP2PElevInfo)
+	go bcast.Receiver(port6, RecieveNewHRAInput)
 
-	fmt.Println("Started")
+	// GoRoutines to broadcast over NTW
+	go bcast.Transmitter(Port1, BCLocalStateTx)
+	go bcast.Transmitter(Port2, BCNewHallReqTx)
+	go bcast.Transmitter(port3, BCFinHallOrderTx)
+	go bcast.Transmitter(port4, BCNewOrderTx)
+	go bcast.Transmitter(port5, BCP2PElevInfoTx)
+	go bcast.Transmitter(port6, BCNewHRAInput)
+
+	// Broadcast Timer
+	//broadcastTimer := time.NewTimer(BroadcastRate)
+	recieveTimer := time.NewTimer(1)
+	recieveTimer.Stop()
+
 	for {
 		select {
-		case p := <-peerUpdateCh:
-			fmt.Printf("Peer update:\n")
-			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
-			fmt.Printf("  Lost:     %q\n", p.Lost)
+		// case der vi sjekker om vi er i init state, og tømmer? variablene
 
-		case a := <-helloRx:
-			fmt.Printf("Received: %#v\n", a)
+		// Print Peer Updates
+		case p := <-peerUpdateCh:
+			printPeerUpdate(p)
+			localTypes.PeerList.Peers = p.Peers
+			if len(p.Lost) != 0 {
+				LostElevChan <- p.Lost
+			}
+			// Broadcasting on network
+		case localState = <-TxElevInfoChan:
+			BCLocalStateTx <- localState
+		case newHallReq = <-TxNewHallRequestChan:
+
+			BCNewHallReqTx <- newHallReq
+
+		case finHallReq = <-TxFinishedHallOrderChan:
+			BCFinHallOrderTx <- finHallReq
+		case newOrder = <-TxNewOrdersChan:
+			BCNewOrderTx <- newOrder
+		case p2pElevInfo = <-TxP2PElevInfoChan:
+			BCP2PElevInfoTx <- p2pElevInfo
+		case newHRAInput = <-TxHRAInputChan:
+			BCNewHRAInput <- newHRAInput
+		/*case <-broadcastTimer.C:
+		fmt.Printf("NET: Broadcasting NOW\n")
+		BCLocalStateTx <- localState
+		BCNewHallReqTx <- newHallReq
+		BCFinHallOrderTx <- finHallReq
+		BCNewOrderTx <- newOrder
+		BCP2PElevInfoTx <- p2pElevInfo
+		broadcastTimer.Reset(BroadcastRate)*/
+
+		case rxP2pElevinfo = <-RecieveP2PElevInfo: // Legge på sender ID?
+
+			RxP2PElevInfoChan <- rxP2pElevinfo
+
+		//	}
+		case newrxnewHallReq := <-RecieveNewHallReqRx:
+
+			if newrxnewHallReq.Floor != 4 {
+				rxnewHallReq = newrxnewHallReq
+				RxNewHallRequestChan <- rxnewHallReq
+			}
+
+		case newrxfinHallReq := <-RecieveFinHallOrderRx:
+			if newrxfinHallReq.Floor != 4 {
+				rxfinHallReq = newrxfinHallReq
+				RxFinishedHallOrderChan <- rxfinHallReq
+			}
+		case newrxLocalState := <-RecieveLocalStateRx:
+			if rxLocalState != newrxLocalState {
+				rxLocalState = newrxLocalState
+				RxElevInfoChan <- rxLocalState
+			}
+		case newrxnewOrder := <-RecieveOrderRx:
+			//if !reflect.DeepEqual(rxnewOrder, newrxnewOrder) {
+			rxnewOrder = newrxnewOrder
+			RxNewOrdersChan <- rxnewOrder
+			//}
+		case rxnewHRAInput = <-RecieveNewHRAInput:
+			RxHRAInputChan <- rxnewHRAInput
+
 		}
 	}
+}
+
+func printPeerUpdate(p peers.PeerUpdate) {
+	fmt.Printf("Peer update:\n")
+	fmt.Printf(" Peers:  %q\n", p.Peers)
+	fmt.Printf(" New: %q\n", p.New)
+	fmt.Printf(" Lost: %q\n", p.Lost)
 }
