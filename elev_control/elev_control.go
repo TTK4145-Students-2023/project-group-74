@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"project-group-74/elev_control/elevio"
 	"project-group-74/localTypes"
+	"project-group-74/network"
 	"time"
 )
 
+// ----- MAIN FUNCTION (ELEVATOR CONTROL) ------ //
 func RunElevator(
 	myIP string,
 	TxElevInfoChan chan<- localTypes.LOCAL_ELEVATOR_INFO,
@@ -31,46 +33,33 @@ func RunElevator(
 			ElevID:    myIP,
 		}
 
-	var MyOrders localTypes.HMATRIX
-	var CombinedHMatrix localTypes.HMATRIX
-	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
-	var dooropentimer *time.Timer
-	dooropentimer = time.NewTimer(time.Second * 1000)
-	dooropentimer.Stop()
-
 	initializing := true
-	elevio.SetDoorOpenLamp(false)
-	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
-	elevio.SetMotorDirection(localTypes.DIR_down)
-	var initimer *time.Timer
-	initimer = time.NewTimer(time.Second * 3)
+
 	for initializing {
 		select {
-		case P2Pinfo := <-RxP2PElevInfoChan:
-			for i := 0; i < len(P2Pinfo); i++ {
-				if P2Pinfo[i].ElevID == MyElev.ElevID {
-					MyElev.CabCalls = P2Pinfo[i].CabCalls
-				}
-			}
-			fmt.Printf("\n\n\n\nNewp2p info in init \n\n\n")
-
 		case MyElev.Floor = <-NewFloorChan:
 			elevio.SetMotorDirection(localTypes.DIR_stop)
 			elevio.SetDoorOpenLamp(false)
-			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
-
-		case <-initimer.C:
+			network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 			initializing = false
-			fmt.Printf("\n\n\n\nInitializing finished!\n\n\n")
+			fmt.Printf("Initializing finished!\n")
 		default:
-			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+			elevio.SetDoorOpenLamp(false)
+			elevio.SetMotorDirection(localTypes.DIR_down)
 			time.Sleep(80 * time.Millisecond)
 		}
 	}
-
 	fmt.Printf("My Elev: %+v\n", MyElev)
-	AllElevs = elevio.UpdateLocalInAllElevs(MyElev, AllElevs)
-	TxP2PElevInfoChan <- AllElevs
+
+	var MyOrders localTypes.HMATRIX
+	var CombinedHMatrix localTypes.HMATRIX
+	AllElevs := make(localTypes.P2P_ELEV_INFO, 0)
+
+	elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
+
+	var dooropentimer *time.Timer
+	dooropentimer = time.NewTimer(time.Second * 1000)
+	dooropentimer.Stop()
 
 	for {
 		select {
@@ -78,7 +67,7 @@ func RunElevator(
 			if MyOrders != newOrder[MyElev.ElevID] {
 				MyOrders = newOrder[MyElev.ElevID]
 			}
-			//fmt.Printf("Myorders %+v\n", MyOrders)
+			fmt.Printf("Myorders %+v\n", MyOrders)
 			CombinedHMatrix = elevio.AddNewOrdersToHMatrix(newOrder)
 			elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 
@@ -89,22 +78,22 @@ func RunElevator(
 				if elevio.IsOrderAtFloor(MyElev, MyOrders) {
 					MyElev.CabCalls[MyElev.Floor] = false
 					if MyOrders[MyElev.Floor][localTypes.Button_hall_up] {
-						localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
+						network.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
 
 					} else if MyOrders[MyElev.Floor][localTypes.Button_hall_down] {
-						localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
+						network.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
 
 					}
 					MyElev.State = localTypes.Door_open
 					elevio.SetDoorOpenLamp(true)
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
-					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+					network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
 				} else {
 					newDir, newState := elevio.FindDirection(MyElev, MyOrders)
 					MyElev.Direction, MyElev.State = newDir, newState
 					elevio.SetMotorDirection(newDir)
-					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+					network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 				}
 			}
 		case newFloor := <-NewFloorChan:
@@ -128,14 +117,14 @@ func RunElevator(
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
+					network.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
 
 				case elevio.Requests_above(MyElev, MyOrders):
 
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
+					network.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
 
 				default:
 					MyElev.State, MyElev.Direction = localTypes.Idle, localTypes.DIR_stop
@@ -147,14 +136,14 @@ func RunElevator(
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_down]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
+					network.SendButtonInfo(MyElev, localTypes.Button_hall_down, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
 
 				case elevio.Requests_below(MyElev, MyOrders):
 
 				case MyOrders[MyElev.Floor][localTypes.Button_hall_up]:
 					nextdir, nextstate = localTypes.DIR_stop, localTypes.Door_open
 					changed = true
-					localTypes.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
+					network.SendButtonInfo(MyElev, localTypes.Button_hall_up, RxFinishedHallOrderChan, TxFinishedHallOrderChan)
 
 				default:
 					MyElev.State, MyElev.Direction = localTypes.Idle, localTypes.DIR_stop
@@ -169,7 +158,7 @@ func RunElevator(
 					dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 				}
 			}
-			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+			network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
 		case newBtnPress := <-NewBtnPressChan:
 			switch newBtnPress.Button {
@@ -194,16 +183,16 @@ func RunElevator(
 						elevio.UpdateOrderLights(MyElev, CombinedHMatrix)
 						dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 					}
-					localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+					network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 				}
 			case localTypes.Button_hall_up:
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					localTypes.SendButtonPress(MyElev, newBtnPress, RxNewHallRequestChan, TxNewHallRequestChan)
+					network.SendButtonPress(MyElev, newBtnPress, RxNewHallRequestChan, TxNewHallRequestChan)
 				}
 
 			case localTypes.Button_hall_down:
 				if !elevio.IsHOrderActive(newBtnPress, CombinedHMatrix) {
-					localTypes.SendButtonPress(MyElev, newBtnPress, RxNewHallRequestChan, TxNewHallRequestChan)
+					network.SendButtonPress(MyElev, newBtnPress, RxNewHallRequestChan, TxNewHallRequestChan)
 				}
 			}
 
@@ -226,7 +215,7 @@ func RunElevator(
 				elevio.SetDoorOpenLamp(true)
 				dooropentimer = time.NewTimer(localTypes.OPEN_DOOR_TIME_sek * time.Second)
 			}
-			localTypes.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
+			network.SendlocalElevInfo(MyElev, RxElevInfoChan, TxElevInfoChan)
 
 		case NewAllElevs := <-RxP2PElevInfoChan:
 			AllElevs = elevio.AddNewAllElevs(AllElevs, NewAllElevs)

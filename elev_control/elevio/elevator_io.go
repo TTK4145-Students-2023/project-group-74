@@ -8,13 +8,16 @@ import (
 	"time"
 )
 
+// ----- CONSTANTS (ELEVATOR IO)------ //
+const _pollRate = 20 * time.Millisecond
+
+// ----- VARIABLES (ELEVATOR IO)------ //
 var _initialized bool = false
 var _mtx sync.Mutex
 var _conn net.Conn
 var _numFloors = localTypes.NUM_FLOORS
 
-const _pollRate = 20 * time.Millisecond
-
+// ----- PUBLIC FUNCTIONS (ELEVATOR IO)------ //
 func Init(addr string, numFloors int) {
 
 	if _initialized {
@@ -93,7 +96,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	}
 }
 
-// get/set funcs
+// ----- PUBLIC GET/SET FUNCTIONS (ELEVATOR IO)------ //
 func SetMotorDirection(dir localTypes.MOTOR_DIR) {
 	write([4]byte{1, byte(dir), 0, 0})
 }
@@ -138,7 +141,7 @@ func GetObstruction() bool {
 	return toBool(a[1])
 }
 
-// private funcs
+// ----- PRIVATE FUNCTIONS (ELEVATOR IO)------ //
 func read(in [4]byte) [4]byte {
 	_mtx.Lock()
 	defer _mtx.Unlock()
