@@ -44,12 +44,16 @@ func OrderAssigner(
 				restored = true
 				fmt.Printf("\nNew HRAInput into init \n")
 			}
+			fmt.Printf("\nNew HRAInput into init \n")
+			
 
 		case <-initimer.C:
 			initializing = false
 			fmt.Printf("\n\n\n\nInitializing finished OA!\n\n\n")
 		default:
 			time.Sleep(80 * time.Millisecond)
+			fmt.Printf("\nDEFAULT INIT OA \n")
+			
 		}
 	}
 	for {
@@ -151,6 +155,9 @@ func OrderAssigner(
 							}
 						}
 					}*/
+		case <-RxHRAInputChan:
+			fmt.Printf("\nDSGDF \n")
+
 		default:
 			time.Sleep((time.Millisecond * 100))
 		}
