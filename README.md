@@ -24,7 +24,7 @@ Whenever new data enters the system, such as a new request or an update on an el
 The code and explanation for the hall_request_assigner is given here: https://github.com/TTK4145/Project-resources/tree/master/cost_fns/hall_request_assigner.
 
 ### Network 
-The network is ```TCP``` and employs both ```MASTER/SLAVE``` and ```PEER-TO-PEER``` functionalities. The ```MASTER/SLAVE``` function ensures that only one elevator is in charge and instructs the others on what tasks to perform, specifically the distribution of orders among the elevators. On the other hand, the ```PEER-TO-PEER``` function is utilized to share "elevator-state" information among the elevators. This enables all elevators to retain the other elevators' data in case an elevator returns to the network after being offline for any reason.
+The network is ```UDP``` and employs both ```MASTER/SLAVE``` and ```PEER-TO-PEER``` functionalities. The ```MASTER/SLAVE``` function ensures that only one elevator is in charge and instructs the others on what tasks to perform, specifically the distribution of orders among the elevators. On the other hand, the ```PEER-TO-PEER``` function is utilized to share "elevator-state" information among the elevators. This enables all elevators to retain the other elevators' data in case an elevator returns to the network after being offline for any reason.
 
 ### Elevator Control
 This module is responsible for running an elevator control system. It communicates with other elevators the control system to manage requests and operate the elevator. The main function runs the elevator control logic in a loop, which processes new orders and updates the elevator state accordingly.
